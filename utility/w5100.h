@@ -13,6 +13,8 @@
 #include <avr/pgmspace.h>
 #include <SPI.h>
 
+#define SPI_ETHERNET_SETTINGS SPISettings(14000000, MSBFIRST, SPI_MODE0)
+
 #define MAX_SOCK_NUM 4
 
 typedef uint8_t SOCKET;
