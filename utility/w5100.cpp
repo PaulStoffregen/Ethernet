@@ -11,34 +11,157 @@
 #include <string.h>
 #include <avr/interrupt.h>
 
+#if defined(__arm__)
+#include "SPIFIFO.h"
+#ifdef  HAS_SPIFIFO
+#define USE_SPIFIFO
+#endif
+#endif
+
+// The W5200 really does require a proper reset pulse!
+// Its SPI state machine remembers the previously started
+// burst transfer, even after SS is deasserted.  Wiznet's
+// documentation does not mention this very unfortunate
+// fact, which means you to really must reset the chip if
+// it may have ever heard an partial transfer (eg, from a
+// previous run before clicking Upload in Arduino) or if
+// its SS and SCK pins are ever left floating.
+#define W5200_RESET_PIN  9
+#define W5200_SS_PIN    10
+
+#include "Arduino.h"
+
 #include "w5100.h"
 
 // W5100 controller instance
+uint16_t W5100Class::SBASE[MAX_SOCK_NUM];
+uint16_t W5100Class::RBASE[MAX_SOCK_NUM];
+uint16_t W5100Class::CH_BASE;
+uint16_t W5100Class::SSIZE;
+uint16_t W5100Class::SMASK;
+uint8_t  W5100Class::chip;
 W5100Class W5100;
 
-#define TX_RX_MAX_BUF_SIZE 2048
-#define TX_BUF 0x1100
-#define RX_BUF (TX_BUF + TX_RX_MAX_BUF_SIZE)
 
-#define TXBUF_BASE 0x4000
-#define RXBUF_BASE 0x6000
-
-void W5100Class::init(void)
+uint8_t W5100Class::init(void)
 {
-  delay(300);
+  uint16_t TXBUF_BASE, RXBUF_BASE;
+  uint8_t i;
 
+  delay(200);
+  //Serial.println("w5100 init");
+
+#ifdef USE_SPIFIFO
+  SPIFIFO.begin(W5200_SS_PIN, SPI_CLOCK_12MHz);  // W5100 is 14 MHz max
+#else
   SPI.begin();
+  SPI.setClockDivider(SPI_CLOCK_DIV2);
   initSS();
+#endif
   
-  writeMR(1<<RST);
-  writeTMSR(0x55);
-  writeRMSR(0x55);
+  if (isW5100()) {
+    CH_BASE = 0x0400;
+    SSIZE = 2048;
+    SMASK = 0x07FF;
+    TXBUF_BASE = 0x4000;
+    RXBUF_BASE = 0x6000;
+    writeTMSR(0x55);
+    writeRMSR(0x55);
 
+  } else if (isW5200()) {
+#ifdef USE_SPIFIFO
+    //SPIFIFO.begin(W5200_SS_PIN, SPI_CLOCK_24MHz);  // W5200 is 33 MHz max
+#endif
+    CH_BASE = 0x4000;
+    SSIZE = 4096;
+    SMASK = 0x0FFF;
+    TXBUF_BASE = 0x8000;
+    RXBUF_BASE = 0xC000;
+    for (i=0; i<MAX_SOCK_NUM; i++) {
+      writeSnRX_SIZE(i, SSIZE >> 10);
+      writeSnTX_SIZE(i, SSIZE >> 10);
+    }
+    for (; i<8; i++) {
+      writeSnRX_SIZE(i, 0);
+      writeSnTX_SIZE(i, 0);
+    }
+
+  } else {
+    //Serial.println("no chip :-(");
+    chip = 0;
+    return 0; // no known chip is responding :-(
+  }
   for (int i=0; i<MAX_SOCK_NUM; i++) {
     SBASE[i] = TXBUF_BASE + SSIZE * i;
-    RBASE[i] = RXBUF_BASE + RSIZE * i;
+    RBASE[i] = RXBUF_BASE + SSIZE * i;
+  }
+  return 1; // successful init
+}
+
+void W5100Class::reset(void)
+{
+  uint16_t count=0;
+
+  //Serial.println("W5100 reset");
+  writeMR(1<<RST);
+  while (++count < 20) {
+    uint8_t mr = readMR();
+    //Serial.print("mr=");
+    //Serial.println(mr, HEX);
+    if (mr == 0) break;
+    delay(1);
   }
 }
+
+uint8_t W5100Class::isW5100(void)
+{
+  chip = 51;
+  //Serial.println("W5100 detect W5100 chip");
+  reset();
+  writeMR(0x10);
+  if (readMR() != 0x10) return 0;
+  writeMR(0x12);
+  if (readMR() != 0x12) return 0;
+  writeMR(0x00);
+  if (readMR() != 0x00) return 0;
+  //Serial.println("chip is W5100");
+  return 1;
+}
+
+uint8_t W5100Class::isW5200(void)
+{
+  uint8_t mr;
+  chip = 52;
+  //Serial.println("W5100 detect W5200 chip");
+#ifdef W5200_RESET_PIN
+  pinMode(W5200_RESET_PIN, OUTPUT);
+  digitalWrite(W5200_RESET_PIN, LOW);
+  delay(1);
+  digitalWrite(W5200_RESET_PIN, HIGH);
+  delay(150);
+#endif
+  reset();
+  writeMR(0x08);
+  mr = readMR();
+  //Serial.print("mr=");
+  //Serial.println(mr, HEX);
+  if (mr != 0x08) return 0;
+  writeMR(0x10);
+  mr = readMR();
+  //Serial.print("mr=");
+  //Serial.println(mr, HEX);
+  if (mr != 0x10) return 0;
+  writeMR(0x00);
+  mr = readMR();
+  //Serial.print("mr=");
+  //Serial.println(mr, HEX);
+  if (mr != 0x00) return 0;
+  //Serial.println("chip is W5200");
+  return 1;
+}
+
+
+
 
 uint16_t W5100Class::getTXFreeSize(SOCKET s)
 {
@@ -98,7 +221,7 @@ void W5100Class::recv_data_processing(SOCKET s, uint8_t *data, uint16_t len, uin
 {
   uint16_t ptr;
   ptr = readSnRX_RD(s);
-  read_data(s, (uint8_t *)ptr, data, len);
+  read_data(s, ptr, data, len);
   if (!peek)
   {
     ptr += len;
@@ -106,18 +229,18 @@ void W5100Class::recv_data_processing(SOCKET s, uint8_t *data, uint16_t len, uin
   }
 }
 
-void W5100Class::read_data(SOCKET s, volatile uint8_t *src, volatile uint8_t *dst, uint16_t len)
+void W5100Class::read_data(SOCKET s, uint16_t src, volatile uint8_t *dst, uint16_t len)
 {
   uint16_t size;
   uint16_t src_mask;
   uint16_t src_ptr;
 
-  src_mask = (uint16_t)src & RMASK;
+  src_mask = (uint16_t)src & SMASK;
   src_ptr = RBASE[s] + src_mask;
 
-  if( (src_mask + len) > RSIZE ) 
+  if( (src_mask + len) > SSIZE ) 
   {
-    size = RSIZE - src_mask;
+    size = SSIZE - src_mask;
     read(src_ptr, (uint8_t *)dst, size);
     dst += size;
     read(RBASE[s], (uint8_t *) dst, len - size);
@@ -127,57 +250,173 @@ void W5100Class::read_data(SOCKET s, volatile uint8_t *src, volatile uint8_t *ds
 }
 
 
-uint8_t W5100Class::write(uint16_t _addr, uint8_t _data)
+#ifdef USE_SPIFIFO
+uint16_t W5100Class::write(uint16_t addr, const uint8_t *buf, uint16_t len)
 {
-  setSS();  
-  SPI.transfer(0xF0);
-  SPI.transfer(_addr >> 8);
-  SPI.transfer(_addr & 0xFF);
-  SPI.transfer(_data);
-  resetSS();
-  return 1;
-}
+  uint32_t i;
 
-uint16_t W5100Class::write(uint16_t _addr, const uint8_t *_buf, uint16_t _len)
-{
-  for (uint16_t i=0; i<_len; i++)
-  {
-    setSS();    
-    SPI.transfer(0xF0);
-    SPI.transfer(_addr >> 8);
-    SPI.transfer(_addr & 0xFF);
-    _addr++;
-    SPI.transfer(_buf[i]);
-    resetSS();
+  if (chip == 51) {
+    for (i=0; i<len; i++) {
+	SPIFIFO.write16(0xF000 | (addr >> 8), SPI_CONTINUE);
+	SPIFIFO.write16((addr << 8) | buf[i]);
+	addr++;
+	SPIFIFO.read();
+	SPIFIFO.read();
+    }
+  } else {
+	SPIFIFO.clear();
+	SPIFIFO.write16(addr, SPI_CONTINUE);
+	SPIFIFO.write16(len | 0x8000, SPI_CONTINUE);
+	for (i=0; i<len; i++) {
+		SPIFIFO.write(buf[i], ((i+1<len) ? SPI_CONTINUE : 0));
+		SPIFIFO.read();
+	}
+	SPIFIFO.read();
+	SPIFIFO.read();
   }
-  return _len;
+  return len;
 }
-
-uint8_t W5100Class::read(uint16_t _addr)
+#else
+uint16_t W5100Class::write(uint16_t addr, const uint8_t *buf, uint16_t len)
 {
-  setSS();  
-  SPI.transfer(0x0F);
-  SPI.transfer(_addr >> 8);
-  SPI.transfer(_addr & 0xFF);
-  uint8_t _data = SPI.transfer(0);
-  resetSS();
-  return _data;
-}
-
-uint16_t W5100Class::read(uint16_t _addr, uint8_t *_buf, uint16_t _len)
-{
-  for (uint16_t i=0; i<_len; i++)
-  {
+  if (chip == 51) {
+    for (uint16_t i=0; i<len; i++) {
+      setSS();
+      SPI.transfer(0xF0);
+      SPI.transfer(addr >> 8);
+      SPI.transfer(addr & 0xFF);
+      addr++;
+      SPI.transfer(buf[i]);
+      resetSS();
+    }
+  } else {
     setSS();
-    SPI.transfer(0x0F);
-    SPI.transfer(_addr >> 8);
-    SPI.transfer(_addr & 0xFF);
-    _addr++;
-    _buf[i] = SPI.transfer(0);
+    SPI.transfer(addr >> 8);
+    SPI.transfer(addr & 0xFF);
+    SPI.transfer(((len >> 8) & 0x7F) | 0x80);
+    SPI.transfer(len & 0xFF);
+    for (uint16_t i=0; i<len; i++) {
+      SPI.transfer(buf[i]);
+    }
     resetSS();
   }
-  return _len;
+  return len;
 }
+#endif
+
+
+#ifdef USE_SPIFIFO
+uint16_t W5100Class::read(uint16_t addr, uint8_t *buf, uint16_t len)
+{
+  uint32_t i;
+
+  if (chip == 51) {
+    for (i=0; i<len; i++) {
+	#if 1
+	SPIFIFO.write(0x0F, SPI_CONTINUE);
+	SPIFIFO.write16(addr, SPI_CONTINUE);
+	addr++;
+	SPIFIFO.read();
+	SPIFIFO.write(0);
+	SPIFIFO.read();
+	buf[i] = SPIFIFO.read();
+	#endif
+	#if 0
+	// this does not work, but why?
+	SPIFIFO.write16(0x0F00 | (addr >> 8), SPI_CONTINUE);
+	SPIFIFO.write16(addr << 8);
+	addr++;
+	SPIFIFO.read();
+	buf[i] = SPIFIFO.read();
+	#endif
+    }
+  } else {
+	// len = 1:  write header, write 1 byte, read
+	// len = 2:  write header, write 2 byte, read
+	// len = 3,5,7
+	SPIFIFO.clear();
+	SPIFIFO.write16(addr, SPI_CONTINUE);
+	SPIFIFO.write16(len & 0x7FFF, SPI_CONTINUE);
+	SPIFIFO.read();
+	if (len == 1) {
+		// read only 1 byte
+		SPIFIFO.write(0);
+		SPIFIFO.read();
+		*buf = SPIFIFO.read();
+	} else if (len == 2) {
+		// read only 2 bytes
+		SPIFIFO.write16(0);
+		SPIFIFO.read();
+		uint32_t val = SPIFIFO.read();
+		*buf++ = val >> 8;
+		*buf = val;
+	} else if ((len & 1)) {
+		// read 3 or more, odd length
+  		//Serial.print("W5200 read, len=");
+		//Serial.println(len);
+		uint32_t count = len / 2;
+		SPIFIFO.write16(0, SPI_CONTINUE);
+		SPIFIFO.read();
+		do {
+			if (count > 1) SPIFIFO.write16(0, SPI_CONTINUE);
+			else SPIFIFO.write(0);
+			uint32_t val = SPIFIFO.read();
+			//TODO: WebClient_speedtest with READSIZE 7 is
+			//dramatically faster with this Serial.print(),
+			//and the 2 above, but not without both.  Why?!
+			//Serial.println(val, HEX);
+			*buf++ = val >> 8;
+			*buf++ = val;
+		} while (--count > 0);
+		*buf = SPIFIFO.read();
+		//Serial.println(*buf, HEX);
+	} else {
+		// read 4 or more, odd length
+  		//Serial.print("W5200 read, len=");
+		//Serial.println(len);
+		uint32_t count = len / 2 - 1;
+		SPIFIFO.write16(0, SPI_CONTINUE);
+		SPIFIFO.read();
+		do {
+			SPIFIFO.write16(0, (count > 0) ? SPI_CONTINUE : 0);
+			uint32_t val = SPIFIFO.read();
+			*buf++ = val >> 8;
+			*buf++ = val;
+		} while (--count > 0);
+		uint32_t val = SPIFIFO.read();
+		*buf++ = val >> 8;
+		*buf++ = val;
+	}
+  }
+  return len;
+}
+#else
+uint16_t W5100Class::read(uint16_t addr, uint8_t *buf, uint16_t len)
+{
+  if (chip == 51) {
+    for (uint16_t i=0; i<len; i++) {
+      setSS();
+      SPI.transfer(0x0F);
+      SPI.transfer(addr >> 8);
+      SPI.transfer(addr & 0xFF);
+      addr++;
+      buf[i] = SPI.transfer(0);
+      resetSS();
+    }
+  } else {
+    setSS();
+    SPI.transfer(addr >> 8);
+    SPI.transfer(addr & 0xFF);
+    SPI.transfer((len >> 8) & 0x7F);
+    SPI.transfer(len & 0xFF);
+    for (uint16_t i=0; i<len; i++) {
+      buf[i] = SPI.transfer(0);
+    }
+    resetSS();
+  }
+  return len;
+}
+#endif
 
 void W5100Class::execCmdSn(SOCKET s, SockCMD _cmd) {
   // Send command to socket
