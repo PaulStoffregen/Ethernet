@@ -52,6 +52,7 @@ uint8_t W5100Class::init(void)
   //Serial.println("w5100 init");
 
 #ifdef USE_SPIFIFO
+  SPI.begin();
   SPIFIFO.begin(W5200_SS_PIN, SPI_CLOCK_12MHz);  // W5100 is 14 MHz max
 #else
   SPI.begin();
@@ -59,6 +60,7 @@ uint8_t W5100Class::init(void)
   initSS();
 #endif
   
+  SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
   if (isW5100()) {
     CH_BASE = 0x0400;
     SSIZE = 2048;
@@ -69,9 +71,6 @@ uint8_t W5100Class::init(void)
     writeRMSR(0x55);
 
   } else if (isW5200()) {
-#ifdef USE_SPIFIFO
-    //SPIFIFO.begin(W5200_SS_PIN, SPI_CLOCK_24MHz);  // W5200 is 33 MHz max
-#endif
     CH_BASE = 0x4000;
     SSIZE = 4096;
     SMASK = 0x0FFF;
@@ -89,12 +88,14 @@ uint8_t W5100Class::init(void)
   } else {
     //Serial.println("no chip :-(");
     chip = 0;
+    SPI.endTransaction();
     return 0; // no known chip is responding :-(
   }
   for (int i=0; i<MAX_SOCK_NUM; i++) {
     SBASE[i] = TXBUF_BASE + SSIZE * i;
     RBASE[i] = RXBUF_BASE + SSIZE * i;
   }
+  SPI.endTransaction();
   return 1; // successful init
 }
 

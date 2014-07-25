@@ -15,8 +15,8 @@ int EthernetClass::begin(uint8_t *mac_address)
 
 
   // Initialise the basic info
-  SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
   W5100.init();
+  SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
   W5100.setMACAddress(mac_address);
   W5100.setIPAddress(IPAddress(0,0,0,0).raw_address());
   SPI.endTransaction();
@@ -64,8 +64,8 @@ void EthernetClass::begin(uint8_t *mac_address, IPAddress local_ip, IPAddress dn
 
 void EthernetClass::begin(uint8_t *mac, IPAddress local_ip, IPAddress dns_server, IPAddress gateway, IPAddress subnet)
 {
-  SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
   W5100.init();
+  SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
   W5100.setMACAddress(mac);
   W5100.setIPAddress(local_ip._address);
   W5100.setGatewayIp(gateway._address);
