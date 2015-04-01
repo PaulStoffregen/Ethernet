@@ -130,16 +130,16 @@ public:
    */
   static void recv_data_processing(SOCKET s, uint8_t *data, uint16_t len, uint8_t peek = 0);
 
-  inline void setGatewayIp(uint8_t * addr) { writeGAR(addr); }
+  inline void setGatewayIp(const uint8_t * addr) { writeGAR(addr); }
   inline void getGatewayIp(uint8_t * addr) { readGAR(addr); }
 
-  inline void setSubnetMask(uint8_t * addr) { writeSUBR(addr); }
+  inline void setSubnetMask(const uint8_t * addr) { writeSUBR(addr); }
   inline void getSubnetMask(uint8_t * addr) { readSUBR(addr); }
 
-  inline void setMACAddress(uint8_t * addr) { writeSHAR(addr); }
+  inline void setMACAddress(const uint8_t * addr) { writeSHAR(addr); }
   inline void getMACAddress(uint8_t * addr) { readSHAR(addr); }
 
-  inline void setIPAddress(uint8_t * addr) { writeSIPR(addr); }
+  inline void setIPAddress(const uint8_t * addr) { writeSIPR(addr); }
   inline void getIPAddress(uint8_t * addr) { readSIPR(addr); }
 
   inline void setRetransmissionTime(uint16_t timeout) { writeRTR(timeout); }
@@ -185,7 +185,7 @@ private:
     return (buf[0] << 8) | buf[1];                \
   }
 #define __GP_REGISTER_N(name, address, size)      \
-  static uint16_t write##name(uint8_t *_buff) {   \
+  static uint16_t write##name(const uint8_t *_buff) {   \
     return write(address, _buff, size);           \
   }                                               \
   static uint16_t read##name(uint8_t *_buff) {    \

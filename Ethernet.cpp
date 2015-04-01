@@ -67,9 +67,15 @@ void EthernetClass::begin(uint8_t *mac, IPAddress local_ip, IPAddress dns_server
   W5100.init();
   SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
   W5100.setMACAddress(mac);
+#if ARDUINO > 106 || TEENSYDUINO > 121
+  W5100.setIPAddress(local_ip._address.bytes);
+  W5100.setGatewayIp(gateway._address.bytes);
+  W5100.setSubnetMask(subnet._address.bytes);
+#else
   W5100.setIPAddress(local_ip._address);
   W5100.setGatewayIp(gateway._address);
   W5100.setSubnetMask(subnet._address);
+#endif
   SPI.endTransaction();
   _dnsServerAddress = dns_server;
 }
