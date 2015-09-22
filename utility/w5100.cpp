@@ -103,6 +103,14 @@ void W5100Class::reset(void)
 {
   uint16_t count=0;
 
+#ifdef W5200_RESET_PIN
+  pinMode(W5200_RESET_PIN, OUTPUT);
+  digitalWrite(W5200_RESET_PIN, LOW);
+  delay(1);
+  digitalWrite(W5200_RESET_PIN, HIGH);
+  delay(150);
+#endif
+
   //Serial.println("W5100 reset");
   writeMR(1<<RST);
   while (++count < 20) {
@@ -134,13 +142,6 @@ uint8_t W5100Class::isW5200(void)
   uint8_t mr;
   chip = 52;
   //Serial.println("W5100 detect W5200 chip");
-#ifdef W5200_RESET_PIN
-  pinMode(W5200_RESET_PIN, OUTPUT);
-  digitalWrite(W5200_RESET_PIN, LOW);
-  delay(1);
-  digitalWrite(W5200_RESET_PIN, HIGH);
-  delay(150);
-#endif
   reset();
   writeMR(0x08);
   mr = readMR();
