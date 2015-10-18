@@ -139,7 +139,7 @@ uint8_t W5100Class::isW5200(void)
   digitalWrite(W5200_RESET_PIN, LOW);
   delay(1);
   digitalWrite(W5200_RESET_PIN, HIGH);
-  delay(150);
+  delay(450);
 #endif
   reset();
   writeMR(0x08);
