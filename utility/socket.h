@@ -15,6 +15,7 @@ extern int16_t recvAvailable(SOCKET s);
 extern uint16_t peek(SOCKET s, uint8_t *buf);
 extern uint16_t sendto(SOCKET s, const uint8_t * buf, uint16_t len, uint8_t * addr, uint16_t port); // Send data (UDP/IP RAW)
 extern uint16_t recvfrom(SOCKET s, uint8_t * buf, uint16_t len, uint8_t * addr, uint16_t *port); // Receive data (UDP/IP RAW)
+extern void flush(SOCKET s); // Wait for transmission to complete
 
 extern uint16_t igmpsend(SOCKET s, const uint8_t * buf, uint16_t len);
 

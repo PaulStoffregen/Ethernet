@@ -345,12 +345,12 @@ uint16_t recvfrom(SOCKET s, uint8_t *buf, uint16_t len, uint8_t *addr, uint16_t 
       break;
 
     case SnMR::MACRAW:
-      W5100.read_data(s,ptr,head,2);
+      W5100.read_data(s, ptr, head, 2);
       ptr+=2;
       data_len = head[0];
       data_len = (data_len<<8) + head[1] - 2;
 
-      W5100.read_data(s,ptr,buf,data_len);
+      W5100.read_data(s, ptr, buf, data_len);
       ptr += data_len;
       W5100.writeSnRX_RD(s, ptr);
       break;
@@ -364,6 +364,12 @@ uint16_t recvfrom(SOCKET s, uint8_t *buf, uint16_t len, uint8_t *addr, uint16_t 
   return data_len;
 }
 
+/**
+ * @brief      Wait for buffered transmission to complete.
+ */
+void flush(SOCKET s) {
+  // TODO
+}
 
 uint16_t igmpsend(SOCKET s, const uint8_t * buf, uint16_t len)
 {
