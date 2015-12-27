@@ -1,31 +1,31 @@
 /*
   Pachube sensor client with Strings
- 
+
  This sketch connects an analog sensor to Pachube (http://www.pachube.com)
  using a Wiznet Ethernet shield. You can use the Arduino Ethernet shield, or
  the Adafruit Ethernet shield, either one will work, as long as it's got
  a Wiznet Ethernet module on board.
- 
- This example has been updated to use version 2.0 of the pachube.com API. 
+
+ This example has been updated to use version 2.0 of the pachube.com API.
  To make it work, create a feed with two datastreams, and give them the IDs
  sensor1 and sensor2. Or change the code below to match your feed.
- 
+
  This example uses the String library, which is part of the Arduino core from
- version 0019.  
- 
+ version 0019.
+
  Circuit:
  * Analog sensor attached to analog in 0
  * Ethernet shield attached to pins 10, 11, 12, 13
- 
+
  created 15 March 2010
  modified 9 Apr 2012
  by Tom Igoe with input from Usman Haque and Joe Saavedra
  modified 8 September 2012
  by Scott Fitzgerald
- 
+
  http://arduino.cc/en/Tutorial/PachubeClientString
  This code is in the public domain.
- 
+
  */
 
 #include <SPI.h>
@@ -39,8 +39,9 @@
 
 // assign a MAC address for the ethernet controller.
 // fill in your address here:
-  byte mac[] = { 
-  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+byte mac[] = {
+  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED
+};
 
 // fill in an available IP address on your network here,
 // for manual configuration:
@@ -78,7 +79,7 @@ void setup() {
 
 void loop() {
   // read the analog sensor:
-  int sensorReading = analogRead(A0);   
+  int sensorReading = analogRead(A0);
   // convert the data to a String to send it:
 
   String dataString = "sensor1,";
@@ -107,7 +108,7 @@ void loop() {
   }
 
   // if you're not connected, and ten seconds have passed since
-  // your last connection, then connect again and send data: 
+  // your last connection, then connect again and send data:
   if(!client.connected() && (millis() - lastConnectionTime > postingInterval)) {
     sendData(dataString);
   }
@@ -140,8 +141,7 @@ void sendData(String thisData) {
 
     // here's the actual content of the PUT request:
     client.println(thisData);
-  } 
-  else {
+  } else {
     // if you couldn't make a connection:
     Serial.println("connection failed");
     Serial.println();

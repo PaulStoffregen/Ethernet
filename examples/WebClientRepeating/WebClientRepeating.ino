@@ -1,23 +1,25 @@
 /*
   Repeating Web client
- 
+
  This sketch connects to a a web server and makes a request
  using a Wiznet Ethernet shield. You can use the Arduino Ethernet shield, or
  the Adafruit Ethernet shield, either one will work, as long as it's got
  a Wiznet Ethernet module on board.
- 
+
  This example uses DNS, by assigning the Ethernet client with a MAC address,
  IP address, and DNS address.
- 
+
  Circuit:
  * Ethernet shield attached to pins 10, 11, 12, 13
- 
+
  created 19 Apr 2012
  by Tom Igoe
- 
- http://arduino.cc/en/Tutorial/WebClientRepeating
+ modified 21 Jan 2014
+ by Federico Vanzati
+
+ http://www.arduino.cc/en/Tutorial/WebClientRepeating
  This code is in the public domain.
- 
+
  */
 
 #include <SPI.h>
@@ -25,34 +27,44 @@
 
 // assign a MAC address for the ethernet controller.
 // fill in your address here:
-byte mac[] = { 
-  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
-// fill in an available IP address on your network here,
-// for manual configuration:
-IPAddress ip(10,0,0,20);
-
-// fill in your Domain Name Server address here:
-IPAddress myDns(1,1,1,1);
+byte mac[] = {
+  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED
+};
+// Set the static IP address to use if the DHCP fails to assign
+IPAddress ip(192, 168, 0, 177);
+IPAddress myDns(192, 168, 0, 1);
 
 // initialize the library instance:
 EthernetClient client;
 
 char server[] = "www.arduino.cc";
+//IPAddress server(64,131,82,241);
 
-unsigned long lastConnectionTime = 0;          // last time you connected to the server, in milliseconds
-boolean lastConnected = false;                 // state of the connection last time through the main loop
-const unsigned long postingInterval = 60*1000;  // delay between updates, in milliseconds
+unsigned long lastConnectionTime = 0;           // last time you connected to the server, in milliseconds
+const unsigned long postingInterval = 10*1000;  // delay between updates, in milliseconds
 
 void setup() {
   // start serial port:
   Serial.begin(9600);
-  // give the ethernet module time to boot up:
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for native USB port only
+  }
+
+  // start the Ethernet connection:
+  Serial.println("Initialize Ethernet with DHCP:");
+  if (Ethernet.begin(mac) == 0) {
+    Serial.println("Failed to configure Ethernet using DHCP");
+    // no point in carrying on, so do nothing forevermore:
+    // try to congifure using IP address instead of DHCP:
+    Ethernet.begin(mac, ip, myDns);
+    Serial.print("My IP address: ");
+    Serial.println(Ethernet.localIP());
+  } else {
+    Serial.print("  DHCP assigned IP ");
+    Serial.println(Ethernet.localIP());
+  }
+  // give the Ethernet shield a second to initialize:
   delay(1000);
-  // start the Ethernet connection using a fixed IP address and DNS server:
-  Ethernet.begin(mac, ip, myDns);
-  // print the Ethernet board/shield's IP address:
-  Serial.print("My IP address: ");
-  Serial.println(Ethernet.localIP());
 }
 
 void loop() {
@@ -61,29 +73,23 @@ void loop() {
   // purposes only:
   if (client.available()) {
     char c = client.read();
-    Serial.print(c);
+    Serial.write(c);
   }
 
-  // if there's no net connection, but there was one last time
-  // through the loop, then stop the client:
-  if (!client.connected() && lastConnected) {
-    Serial.println();
-    Serial.println("disconnecting.");
-    client.stop();
-  }
-
-  // if you're not connected, and ten seconds have passed since
-  // your last connection, then connect again and send data:
-  if(!client.connected() && (millis() - lastConnectionTime > postingInterval)) {
+  // if ten seconds have passed since your last connection,
+  // then connect again and send data:
+  if (millis() - lastConnectionTime > postingInterval) {
     httpRequest();
   }
-  // store the state of the connection for next time through
-  // the loop:
-  lastConnected = client.connected();
+
 }
 
 // this method makes a HTTP connection to the server:
 void httpRequest() {
+  // close any connection before send a new request.
+  // This will free the socket on the WiFi shield
+  client.stop();
+
   // if there's a successful connection:
   if (client.connect(server, 80)) {
     Serial.println("connecting...");
@@ -96,12 +102,9 @@ void httpRequest() {
 
     // note the time that the connection was made:
     lastConnectionTime = millis();
-  } 
-  else {
+  } else {
     // if you couldn't make a connection:
     Serial.println("connection failed");
-    Serial.println("disconnecting.");
-    client.stop();
   }
 }
 

@@ -1,31 +1,31 @@
 /*
   Xively sensor client with Strings
- 
+
  This sketch connects an analog sensor to Xively (http://www.xively.com)
  using a Wiznet Ethernet shield. You can use the Arduino Ethernet shield, or
  the Adafruit Ethernet shield, either one will work, as long as it's got
  a Wiznet Ethernet module on board.
- 
- This example has been updated to use version 2.0 of the xively.com API. 
+
+ This example has been updated to use version 2.0 of the xively.com API.
  To make it work, create a feed with two datastreams, and give them the IDs
  sensor1 and sensor2. Or change the code below to match your feed.
- 
+
  This example uses the String library, which is part of the Arduino core from
- version 0019.  
- 
+ version 0019.
+
  Circuit:
  * Analog sensor attached to analog in 0
  * Ethernet shield attached to pins 10, 11, 12, 13
- 
+
  created 15 March 2010
  modified 9 Apr 2012
  by Tom Igoe with input from Usman Haque and Joe Saavedra
  modified 8 September 2012
  by Scott Fitzgerald
- 
+
  http://arduino.cc/en/Tutorial/XivelyClientString
  This code is in the public domain.
- 
+
  */
 
 #include <SPI.h>
@@ -39,19 +39,20 @@
 
 // assign a MAC address for the ethernet controller.
 // fill in your address here:
-  byte mac[] = { 
-  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+byte mac[] = {
+  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED
+};
 
 // fill in an available IP address on your network here,
 // for manual configuration:
-IPAddress ip(10,0,1,20);
+IPAddress ip(10, 0, 1, 20);
 
 // initialize the library instance:
 EthernetClient client;
 
 // if you don't want to use DNS (and reduce your sketch size)
 // use the numeric IP instead of the name for the server:
-IPAddress server(216,52,233,121);      // numeric IP for api.xively.com
+IPAddress server(216, 52, 233, 121);      // numeric IP for api.xively.com
 //char server[] = "api.xively.com";   // name address for xively API
 
 unsigned long lastConnectionTime = 0;          // last time you connected to the server, in milliseconds
@@ -62,7 +63,7 @@ void setup() {
  // Open serial communications and wait for port to open:
   Serial.begin(9600);
   while (!Serial) {
-    ; // wait for serial port to connect. Needed for Leonardo only
+    ; // wait for serial port to connect. Needed for native USB port only
   }
 
 
@@ -78,7 +79,7 @@ void setup() {
 
 void loop() {
   // read the analog sensor:
-  int sensorReading = analogRead(A0);   
+  int sensorReading = analogRead(A0);
   // convert the data to a String to send it:
 
   String dataString = "sensor1,";
@@ -107,7 +108,7 @@ void loop() {
   }
 
   // if you're not connected, and ten seconds have passed since
-  // your last connection, then connect again and send data: 
+  // your last connection, then connect again and send data:
   if(!client.connected() && (millis() - lastConnectionTime > postingInterval)) {
     sendData(dataString);
   }
@@ -140,7 +141,7 @@ void sendData(String thisData) {
 
     // here's the actual content of the PUT request:
     client.println(thisData);
-  } 
+  }
   else {
     // if you couldn't make a connection:
     Serial.println("connection failed");

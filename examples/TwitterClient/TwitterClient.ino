@@ -1,27 +1,27 @@
 /*
   Twitter Client with Strings
- 
+
  This sketch connects to Twitter using an Ethernet shield. It parses the XML
  returned, and looks for <text>this is a tweet</text>
- 
- You can use the Arduino Ethernet shield, or the Adafruit Ethernet shield, 
+
+ You can use the Arduino Ethernet shield, or the Adafruit Ethernet shield,
  either one will work, as long as it's got a Wiznet Ethernet module on board.
- 
- This example uses the DHCP routines in the Ethernet library which is part of the 
+
+ This example uses the DHCP routines in the Ethernet library which is part of the
  Arduino core from version 1.0 beta 1
- 
+
  This example uses the String library, which is part of the Arduino core from
- version 0019.  
- 
+ version 0019.
+
  Circuit:
  * Ethernet shield attached to pins 10, 11, 12, 13
- 
+
  created 21 May 2011
  modified 9 Apr 2012
  by Tom Igoe
- 
+
  This code is in the public domain.
- 
+
  */
 #include <SPI.h>
 #include <Ethernet.h>
@@ -29,9 +29,10 @@
 
 // Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network:
-byte mac[] = { 
-  0x00, 0xAA, 0xBB, 0xCC, 0xDE, 0x01 };
-IPAddress ip(192,168,1,20);
+byte mac[] = {
+  0x00, 0xAA, 0xBB, 0xCC, 0xDE, 0x01
+};
+IPAddress ip(192, 168, 1, 20);
 
 // initialize the library instance:
 EthernetClient client;
@@ -82,17 +83,17 @@ void loop()
       char inChar = client.read();
 
       // add incoming byte to end of line:
-      currentLine += inChar; 
+      currentLine += inChar;
 
       // if you get a newline, clear the line:
       if (inChar == '\n') {
         currentLine = "";
-      } 
+      }
       // if the current line ends with <text>, it will
       // be followed by the tweet:
       if ( currentLine.endsWith("<text>")) {
         // tweet is beginning. Clear the tweet string:
-        readingTweet = true; 
+        readingTweet = true;
         tweet = "";
       }
       // if you're currently reading the bytes of a tweet,
@@ -100,17 +101,16 @@ void loop()
       if (readingTweet) {
         if (inChar != '<') {
           tweet += inChar;
-        } 
-        else {
+        } else {
           // if you got a "<" character,
           // you've reached the end of the tweet:
           readingTweet = false;
-          Serial.println(tweet);   
+          Serial.println(tweet);
           // close the connection to the server:
-          client.stop(); 
+          client.stop();
         }
       }
-    }   
+    }
   }
   else if (millis() - lastAttemptTime > requestInterval) {
     // if you're not connected, and two minutes have passed since
@@ -132,5 +132,5 @@ void connectToServer() {
   }
   // note the time of this connect attempt:
   lastAttemptTime = millis();
-}   
+}
 
