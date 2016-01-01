@@ -34,9 +34,9 @@ int EthernetClient::connect(IPAddress ip, uint16_t port)
 		if (!sock) return 0;
 		delay(1);
 	}
-	recv_count = sock.recvAvailable();
-	recv_offset = sock.recvOffset();
-	recv_buffer_count = 0;
+	//recv_count = sock.recvAvailable();
+	//recv_offset = sock.recvOffset();
+	//recv_buffer_count = 0;
 	return 1;
 }
 

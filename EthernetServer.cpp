@@ -71,8 +71,8 @@ size_t EthernetServer::write(uint8_t b)
 
 size_t EthernetServer::write(const uint8_t *buffer, size_t size) 
 {
-  size_t n = 0;
-  
+  //size_t n = 0;
+
   accept();
   if (sock) {
     uint8_t stat = sock.socketStatus();
