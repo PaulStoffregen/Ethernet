@@ -14,11 +14,11 @@ static uint16_t local_port;
 
 uint8_t W5000socket::begin(uint8_t protocol, uint16_t port)
 {
-	Serial.printf("W5000socket begin, s=%d, protocol=%d, port=%d\n", s, protocol, port);
+	//Serial.printf("W5000socket begin, s=%d, protocol=%d, port=%d\n", s, protocol, port);
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
 	uint8_t status[MAX_SOCK_NUM];
 	if (s < MAX_SOCK_NUM) {
-		Serial.printf("W5000socket step1\n");
+		//Serial.printf("W5000socket step1\n");
 		// we already have a hardware socket
 		uint8_t stat;
 		stat = W5100.readSnSR(s);
@@ -32,19 +32,19 @@ uint8_t W5000socket::begin(uint8_t protocol, uint16_t port)
 		}
 		status[s] = stat;
 	}
-	Serial.printf("W5000socket step2\n");
+	//Serial.printf("W5000socket step2\n");
 	// look at all the hardware sockets, use any closed 
 	for (s=0; s < MAX_SOCK_NUM; s++) {
 		status[s] = W5100.readSnSR(s);
 		if (status[s] == SnSR::CLOSED) goto makesocket;
 	}
-	Serial.printf("W5000socket step3\n");
+	//Serial.printf("W5000socket step3\n");
 	// next, use any that are effectively closed
 	for (s=0; s < MAX_SOCK_NUM; s++) {
 		uint8_t stat = status[s];
 		if (stat == SnSR::CLOSE_WAIT) goto closemakesocket;
 	}
-	Serial.printf("W5000socket step4\n");
+	//Serial.printf("W5000socket step4\n");
 	// as a last resort, forcibly close any already closing
 	for (s=0; s < MAX_SOCK_NUM; s++) {
 		uint8_t stat = status[s];
@@ -56,11 +56,12 @@ uint8_t W5000socket::begin(uint8_t protocol, uint16_t port)
 	SPI.endTransaction();
 	return 0; // all sockets are in use
 closemakesocket:
-	Serial.printf("W5000socket close\n");
+	//Serial.printf("W5000socket close\n");
 	W5100.execCmdSn(s, Sock_CLOSE);
-	W5100.writeSnIR(s, 0xFF);
 makesocket:
-	Serial.printf("W5000socket %d\n", s);
+	//W5100.execCmdSn(s, Sock_CLOSE);
+	W5100.writeSnIR(s, 0xFF);
+	//Serial.printf("W5000socket %d\n", s);
 	W5100.writeSnMR(s, protocol);
 	if (port > 0) {
 		W5100.writeSnPORT(s, port);
@@ -80,36 +81,6 @@ void W5000socket::moveTo(W5000socket &rhs)
 	rhs.s = MAX_SOCK_NUM;
 }
 
-
-#if 0
-/**
- * @brief	This Socket function initialize the channel in perticular mode, and set the port and wait for W5100 done it.
- * @return 	1 for success else 0.
- */
-uint8_t W5000socket::socket(SOCKET sock, uint8_t protocol, uint16_t port, uint8_t flag)
-{
-  if ((protocol == SnMR::TCP) || (protocol == SnMR::UDP) || (protocol == SnMR::IPRAW) || (protocol == SnMR::MACRAW) || (protocol == SnMR::PPPOE))
-  {
-    s = sock;
-    SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-    W5100.execCmdSn(s, Sock_CLOSE);
-    W5100.writeSnIR(s, 0xFF);
-    W5100.writeSnMR(s, protocol | flag);
-    if (port != 0) {
-      W5100.writeSnPORT(s, port);
-    } 
-    else {
-      local_port++; // if don't set the source port, set local_port number.
-      W5100.writeSnPORT(s, local_port);
-    }
-    W5100.execCmdSn(s, Sock_OPEN);
-    SPI.endTransaction();
-    return 1;
-  }
-
-  return 0;
-}
-#endif
 
 uint8_t W5000socket::socketStatus()
 {
@@ -277,10 +248,12 @@ int16_t W5000socket::recv(uint8_t *buf, int16_t len)
 
 int16_t W5000socket::recvAvailable()
 {
-  SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-  int16_t ret = W5100.getRXReceivedSize(s);
-  SPI.endTransaction();
-  return ret;
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	int16_t ret = W5100.getRXReceivedSize(s);
+	//uint8_t ir = W5100.readSnIR(s);
+	SPI.endTransaction();
+	//Serial.printf("sock.recvAvailable s=%d, ir=%02X, num=%d\n", s, ir, ret);
+	return ret;
 }
 
 
@@ -472,6 +445,7 @@ uint16_t W5000socket::igmpsend(const uint8_t * buf, uint16_t len)
 
 uint16_t W5000socket::bufferData(uint16_t offset, const uint8_t* buf, uint16_t len)
 {
+	//Serial.printf("  bufferData, offset=%d, len=%d\n", offset, len);
   uint16_t ret =0;
   SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
   if (len > W5100.getTXFreeSize(s))
