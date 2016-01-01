@@ -38,7 +38,7 @@
 #define ethernetudp_h
 
 #include <Udp.h>
-#include "utility/socket.h"
+#include "socket.h"
 
 #define UDP_TX_PACKET_MAX_SIZE 24
 

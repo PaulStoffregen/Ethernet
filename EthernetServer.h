@@ -2,7 +2,7 @@
 #define ethernetserver_h
 
 #include "Server.h"
-#include "utility/socket.h"
+#include "socket.h"
 
 class EthernetClient;
 
