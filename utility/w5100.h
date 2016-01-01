@@ -295,9 +295,9 @@ private:
 
   static const uint8_t  RST = 7; // Reset BIT
 
+public:
   static const int SOCKETS = 4;
   static uint16_t SMASK;
-public:
   static uint16_t SSIZE;
 private:
   //receive and transmit have same buffer sizes

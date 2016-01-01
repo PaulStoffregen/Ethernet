@@ -174,16 +174,6 @@ uint16_t W5100Class::getTXFreeSize(SOCKET s)
 		if (val == prev) return val;
 		prev = val;
 	}
-/*
-  uint16_t val=0, val1=0;
-  do {
-    val1 = readSnTX_FSR(s);
-    if (val1 != 0)
-      val = readSnTX_FSR(s);
-  } 
-  while (val != val1);
-  return val;
-*/
 }
 
 uint16_t W5100Class::getRXReceivedSize(SOCKET s)
@@ -196,16 +186,6 @@ uint16_t W5100Class::getRXReceivedSize(SOCKET s)
 		if (val == prev) return val;
 		prev = val;
 	}
-/*
-  uint16_t val=0,val1=0;
-  do {
-    val1 = readSnRX_RSR(s);
-    if (val1 != 0)
-      val = readSnRX_RSR(s);
-  } 
-  while (val != val1);
-  return val;
-*/
 }
 
 

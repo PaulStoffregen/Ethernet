@@ -59,9 +59,9 @@ closemakesocket:
 	//Serial.printf("W5000socket close\n");
 	W5100.execCmdSn(s, Sock_CLOSE);
 makesocket:
-	//W5100.execCmdSn(s, Sock_CLOSE);
+	Serial.printf("W5000socket %d\n", s);
+	//delayMicroseconds(25); // TODO: is this needed??
 	W5100.writeSnIR(s, 0xFF);
-	//Serial.printf("W5000socket %d\n", s);
 	W5100.writeSnMR(s, protocol);
 	if (port > 0) {
 		W5100.writeSnPORT(s, port);
@@ -216,28 +216,21 @@ int16_t W5000socket::recv(uint8_t *buf, int16_t len)
   // Check how much data is available
   SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
   int16_t ret = W5100.getRXReceivedSize(s);
-  if ( ret == 0 )
-  {
+  if ( ret == 0 ) {
     // No data available.
     uint8_t status = W5100.readSnSR(s);
-    if ( status == SnSR::LISTEN || status == SnSR::CLOSED || status == SnSR::CLOSE_WAIT )
-    {
+    if ( status == SnSR::LISTEN || status == SnSR::CLOSED || status == SnSR::CLOSE_WAIT ) {
       // The remote end has closed its side of the connection, so this is the eof state
       ret = 0;
-    }
-    else
-    {
+    } else {
       // The connection is still up, but there's no data waiting to be read
       ret = -1;
     }
-  }
-  else if (ret > len)
-  {
+  } else if (ret > len) {
     ret = len;
   }
 
-  if ( ret > 0 )
-  {
+  if ( ret > 0 ) {
     W5100.recv_data_processing(s, buf, ret);
     W5100.execCmdSn(s, Sock_RECV);
   }
@@ -245,15 +238,37 @@ int16_t W5000socket::recv(uint8_t *buf, int16_t len)
   return ret;
 }
 
-
-int16_t W5000socket::recvAvailable()
+void W5000socket::read_data(uint16_t src, volatile uint8_t *dst, uint16_t len)
 {
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	int16_t ret = W5100.getRXReceivedSize(s);
+	W5100.read_data(s, src, dst, len);
+	SPI.endTransaction();
+}
+
+uint16_t W5000socket::recvAvailable()
+{
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	uint16_t ret = W5100.getRXReceivedSize(s);
 	//uint8_t ir = W5100.readSnIR(s);
 	SPI.endTransaction();
 	//Serial.printf("sock.recvAvailable s=%d, ir=%02X, num=%d\n", s, ir, ret);
 	return ret;
+}
+
+uint16_t W5000socket::recvOffset()
+{
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	uint16_t ret = W5100.readSnRX_RD(s);
+	SPI.endTransaction();
+	return ret;
+}
+
+void W5000socket::updateRecvOffset(uint16_t offset)
+{
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	W5100.writeSnRX_RD(s, offset);
+	W5100.execCmdSn(s, Sock_RECV);
+	SPI.endTransaction();
 }
 
 

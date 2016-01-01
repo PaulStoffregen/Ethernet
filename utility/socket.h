@@ -24,7 +24,10 @@ public:
 	uint16_t send(const uint8_t * buf, uint16_t len);
 	// Receive data (TCP)
 	int16_t recv(uint8_t * buf, int16_t len);
-	int16_t recvAvailable();
+	void read_data(uint16_t src, volatile uint8_t *dst, uint16_t len);
+	void updateRecvOffset(uint16_t offset);
+	uint16_t recvAvailable();
+	uint16_t recvOffset();
 	uint16_t peek(uint8_t *buf);
 	 // Send data (UDP/IP RAW)
 	uint16_t sendto(const uint8_t * buf, uint16_t len, uint8_t * addr, uint16_t port);

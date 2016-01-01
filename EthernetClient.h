@@ -36,8 +36,12 @@ public:
   using Print::write;
 
 private:
-  static uint16_t srcport;
-  W5000socket sock;
+	uint16_t recv_count;
+	uint16_t recv_offset;
+	uint8_t  recv_buffer_count;
+	uint8_t  recv_buffer[15];
+	W5000socket sock;
+	static uint16_t srcport;
 };
 
 #endif
