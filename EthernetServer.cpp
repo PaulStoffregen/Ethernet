@@ -15,43 +15,38 @@ EthernetServer::EthernetServer(uint16_t port)
 
 void EthernetServer::begin()
 {
-  for (int sock = 0; sock < MAX_SOCK_NUM; sock++) {
-    EthernetClient client(sock);
-    if (client.status() == SnSR::CLOSED) {
-      socket(sock, SnMR::TCP, _port, 0);
-      listen(sock);
-      EthernetClass::_server_port[sock] = _port;
-      break;
-    }
-  }  
+  sock.begin(SnMR::TCP, _port);
+  if (sock) sock.listen();
 }
 
 void EthernetServer::accept()
 {
-  int listening = 0;
+  bool listening = false;
 
-  for (int sock = 0; sock < MAX_SOCK_NUM; sock++) {
-    EthernetClient client(sock);
-
-    if (EthernetClass::_server_port[sock] == _port) {
-      if (client.status() == SnSR::LISTEN) {
-        listening = 1;
-      } 
-      else if (client.status() == SnSR::CLOSE_WAIT && !client.available()) {
-        client.stop();
-      }
-    } 
+  if (sock) {
+    uint8_t status = sock.socketStatus();
+    if (status == SnSR::LISTEN) {
+      listening = true;
+    } else if (status == SnSR::CLOSE_WAIT && sock.recvAvailable() <= 0) {
+      sock.disconnect();
+      // TODO: wait?
+    }
   }
-
-  if (!listening) {
-    begin();
-  }
+  if (!listening) begin();
 }
 
 EthernetClient EthernetServer::available()
 {
   accept();
-
+  if (sock) {
+    uint8_t stat = sock.socketStatus();
+    if (stat == SnSR::ESTABLISHED || (stat == SnSR::CLOSE_WAIT && sock.recvAvailable() > 0)) {
+      EthernetClient client(sock);
+      return client;
+    }
+  }
+  return EthernetClient();
+/*
   for (int sock = 0; sock < MAX_SOCK_NUM; sock++) {
     EthernetClient client(sock);
     if (EthernetClass::_server_port[sock] == _port) {
@@ -66,6 +61,7 @@ EthernetClient EthernetServer::available()
   }
 
   return EthernetClient(MAX_SOCK_NUM);
+*/
 }
 
 size_t EthernetServer::write(uint8_t b) 
@@ -78,7 +74,15 @@ size_t EthernetServer::write(const uint8_t *buffer, size_t size)
   size_t n = 0;
   
   accept();
-
+  if (sock) {
+    uint8_t stat = sock.socketStatus();
+    if (stat == SnSR::ESTABLISHED) {
+      return sock.send(buffer, size);
+    }
+  }
+  return 0;
+}
+/*
   for (int sock = 0; sock < MAX_SOCK_NUM; sock++) {
     EthernetClient client(sock);
 
@@ -90,3 +94,4 @@ size_t EthernetServer::write(const uint8_t *buffer, size_t size)
   
   return n;
 }
+*/

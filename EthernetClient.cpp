@@ -12,13 +12,7 @@ extern "C" {
 #include "EthernetServer.h"
 #include "Dns.h"
 
-uint16_t EthernetClient::_srcport = 49152;      //Use IANA recommended ephemeral port range 49152-65535
-
-EthernetClient::EthernetClient() : _sock(MAX_SOCK_NUM) {
-}
-
-EthernetClient::EthernetClient(uint8_t sock) : _sock(sock) {
-}
+uint16_t EthernetClient::srcport = 49152;      //Use IANA recommended ephemeral port range 49152-65535
 
 int EthernetClient::connect(const char* host, uint16_t port) {
   // Look up the host first
@@ -36,37 +30,15 @@ int EthernetClient::connect(const char* host, uint16_t port) {
 }
 
 int EthernetClient::connect(IPAddress ip, uint16_t port) {
-  if (_sock != MAX_SOCK_NUM)
-    return 0;
+  if (ip == IPAddress(0ul) || ip == IPAddress(0xFFFFFFFFul)) return 0;
+  if (++srcport == 0) srcport = 49152; // IANA recommended ephemeral port range 49152-65535
 
-  for (int i = 0; i < MAX_SOCK_NUM; i++) {
-    uint8_t s = socketStatus(i);
-    if (s == SnSR::CLOSED || s == SnSR::FIN_WAIT || s == SnSR::CLOSE_WAIT) {
-      _sock = i;
-      break;
-    }
-  }
-
-  if (_sock == MAX_SOCK_NUM)
-    return 0;
-
-  _srcport++;
-  if (_srcport == 0) _srcport = 49152;          //Use IANA recommended ephemeral port range 49152-65535
-  socket(_sock, SnMR::TCP, _srcport, 0);
-
-  if (!::connect(_sock, rawIPAddress(ip), port)) {
-    _sock = MAX_SOCK_NUM;
-    return 0;
-  }
-
+  if (!sock.begin(SnMR::TCP, srcport)) return 0;
+  sock.connect(rawIPAddress(ip), port);
   while (status() != SnSR::ESTABLISHED) {
+    if (!sock) return 0;
     delay(1);
-    if (status() == SnSR::CLOSED) {
-      _sock = MAX_SOCK_NUM;
-      return 0;
-    }
   }
-
   return 1;
 }
 
@@ -75,11 +47,7 @@ size_t EthernetClient::write(uint8_t b) {
 }
 
 size_t EthernetClient::write(const uint8_t *buf, size_t size) {
-  if (_sock == MAX_SOCK_NUM) {
-    setWriteError();
-    return 0;
-  }
-  if (!send(_sock, buf, size)) {
+  if (!sock || !sock.send(buf, size)) {
     setWriteError();
     return 0;
   }
@@ -87,69 +55,59 @@ size_t EthernetClient::write(const uint8_t *buf, size_t size) {
 }
 
 int EthernetClient::available() {
-  if (_sock != MAX_SOCK_NUM)
-    return recvAvailable(_sock);
-  return 0;
+  if (!sock) return 0;
+  return sock.recvAvailable();
 }
 
 int EthernetClient::read() {
+  if (!sock) return -1;
   uint8_t b;
-  if ( recv(_sock, &b, 1) > 0 )
-  {
+  if (sock.recv(&b, 1) > 0 ) {
     // recv worked
     return b;
-  }
-  else
-  {
+  } else {
     // No data available
     return -1;
   }
 }
 
 int EthernetClient::read(uint8_t *buf, size_t size) {
-  return recv(_sock, buf, size);
+  return sock.recv(buf, size);
 }
 
 int EthernetClient::peek() {
-  uint8_t b;
   // Unlike recv, peek doesn't check to see if there's any data available, so we must
-  if (!available())
-    return -1;
-  ::peek(_sock, &b);
+  if (!sock || !available()) return -1;
+  uint8_t b;
+  sock.peek(&b);
   return b;
 }
 
 void EthernetClient::flush() {
-  ::flush(_sock);
+  sock.flush();
 }
 
 void EthernetClient::stop() {
-  if (_sock == MAX_SOCK_NUM)
-    return;
+  if (!sock) return;
 
   // attempt to close the connection gracefully (send a FIN to other side)
-  disconnect(_sock);
+  sock.disconnect();
   unsigned long start = millis();
 
   // wait up to a second for the connection to close
   uint8_t s;
   do {
     s = status();
-    if (s == SnSR::CLOSED)
-      break; // exit the loop
+    if (s == SnSR::CLOSED) break; // exit the loop
     delay(1);
   } while (millis() - start < 1000);
 
   // if it hasn't closed, close it forcefully
-  if (s != SnSR::CLOSED)
-    close(_sock);
-
-  EthernetClass::_server_port[_sock] = 0;
-  _sock = MAX_SOCK_NUM;
+  if (s != SnSR::CLOSED) sock.close();
 }
 
 uint8_t EthernetClient::connected() {
-  if (_sock == MAX_SOCK_NUM) return 0;
+  if (!sock) return 0;
   
   uint8_t s = status();
   return !(s == SnSR::LISTEN || s == SnSR::CLOSED || s == SnSR::FIN_WAIT ||
@@ -157,17 +115,13 @@ uint8_t EthernetClient::connected() {
 }
 
 uint8_t EthernetClient::status() {
-  if (_sock == MAX_SOCK_NUM) return SnSR::CLOSED;
-  return socketStatus(_sock);
+  if (!sock) return SnSR::CLOSED;
+  return sock.socketStatus();
 }
 
 // the next function allows us to use the client returned by
 // EthernetServer::available() as the condition in an if-statement.
 
-EthernetClient::operator bool() {
-  return _sock != MAX_SOCK_NUM;
-}
-
 bool EthernetClient::operator==(const EthernetClient& rhs) {
-  return _sock == rhs._sock && _sock != MAX_SOCK_NUM && rhs._sock != MAX_SOCK_NUM;
+  return sock && rhs.sock && getSocketNumber() == rhs.getSocketNumber();
 }

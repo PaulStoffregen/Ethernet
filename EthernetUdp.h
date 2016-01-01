@@ -38,6 +38,7 @@
 #define ethernetudp_h
 
 #include <Udp.h>
+#include "utility/socket.h"
 
 #define UDP_TX_PACKET_MAX_SIZE 24
 
@@ -49,11 +50,12 @@ private:
   uint16_t _offset; // offset into the packet being sent
 
 protected:
-  uint8_t _sock;  // socket ID for Wiz5100
+  //uint8_t _sock;  // socket ID for Wiz5100
+  W5000socket sock;
   uint16_t _remaining; // remaining bytes of incoming packet yet to be processed
 
 public:
-  EthernetUDP();  // Constructor
+  EthernetUDP() {}  // Constructor
   virtual uint8_t begin(uint16_t);	// initialize, start listening on specified port. Returns 1 if successful, 0 if there are no sockets available to use
   virtual uint8_t beginMulticast(IPAddress, uint16_t);  // initialize, start listening on specified port. Returns 1 if successful, 0 if there are no sockets available to use
   virtual void stop();  // Finish with the UDP socket

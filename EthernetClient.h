@@ -4,12 +4,13 @@
 #include "Print.h"
 #include "Client.h"
 #include "IPAddress.h"
+#include "utility/socket.h"
 
 class EthernetClient : public Client {
 
 public:
-  EthernetClient();
-  EthernetClient(uint8_t sock);
+  EthernetClient() { };
+  EthernetClient(W5000socket &socket) { sock.moveTo(socket); }
 
   uint8_t status();
   virtual int connect(IPAddress ip, uint16_t port);
@@ -23,20 +24,20 @@ public:
   virtual void flush();
   virtual void stop();
   virtual uint8_t connected();
-  virtual operator bool();
+  virtual operator bool() { return (bool)sock; }
   virtual bool operator==(const bool value) { return bool() == value; }
   virtual bool operator!=(const bool value) { return bool() != value; }
   virtual bool operator==(const EthernetClient&);
   virtual bool operator!=(const EthernetClient& rhs) { return !this->operator==(rhs); };
-  uint8_t getSocketNumber() { return _sock; }
+  uint8_t getSocketNumber() const { return sock.getSocketNumber(); }
 
   friend class EthernetServer;
   
   using Print::write;
 
 private:
-  static uint16_t _srcport;
-  uint8_t _sock;
+  static uint16_t srcport;
+  W5000socket sock;
 };
 
 #endif
