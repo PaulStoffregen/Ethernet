@@ -21,17 +21,8 @@ uint16_t socketSend(uint8_t s, const uint8_t * buf, uint16_t len);
 // Receive data (TCP)
 int      socketRecv(uint8_t s, uint8_t * buf, int16_t len);
 uint16_t socketRecvAvailable(uint8_t s);
-//void     socketRead_data(uint8_t s, uint16_t src, volatile uint8_t *dst, uint16_t len);
-//void     socketUpdateRecvOffset(uint8_t s, uint16_t offset);
-//uint16_t socketRecvOffset(uint8_t s);
 uint16_t socketPeek(uint8_t s, uint8_t *buf);
- // Send data (UDP/IP RAW)
-uint16_t socketSendto(uint8_t s, const uint8_t * buf, uint16_t len, uint8_t * addr, uint16_t port);
-// Receive data (UDP/IP RAW)
-uint16_t socketRecvfrom(uint8_t s, uint8_t * buf, uint16_t len, uint8_t * addr, uint16_t *port);
 
-// Functions to allow buffered UDP send (i.e. where the UDP datagram is built up over a
-// number of calls before being sent
 /*
   @brief This function sets up a UDP datagram, the data for which will be provided by one
   or more calls to bufferData and then finally sent with sendUDP.
