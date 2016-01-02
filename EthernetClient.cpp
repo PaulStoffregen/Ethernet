@@ -52,11 +52,6 @@ size_t EthernetClient::write(const uint8_t *buf, size_t size)
 	return 0;
 }
 
-// registers
-// Sn_RX_RSR  Number of bytes received
-// Sn_RX_RD   Address to read
-// 
-
 int EthernetClient::available()
 {
 	if (sockindex >= MAX_SOCK_NUM) return 0;

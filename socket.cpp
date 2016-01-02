@@ -14,8 +14,9 @@ extern void yield(void);
 static uint16_t local_port;
 
 typedef struct {
-	uint16_t RX_RSR;
-	uint16_t RX_RD;
+	uint16_t RX_RSR; // Number of bytes received
+	uint16_t RX_RD;  // Address to read
+	uint16_t TX_FSR; // Free space ready for transmit
 } socketstate_t;
 
 static socketstate_t state[MAX_SOCK_NUM];
@@ -23,7 +24,7 @@ static socketstate_t state[MAX_SOCK_NUM];
 
 static uint16_t getTXFreeSize(uint8_t s);
 static uint16_t getRXReceivedSize(uint8_t s);
-static void send_data_processing(uint8_t s, uint16_t data_offset, const uint8_t *data, uint16_t len);
+static void send_data_processing(uint8_t s, uint16_t offset, const uint8_t *data, uint16_t len);
 static void read_data(uint8_t s, uint16_t src, volatile uint8_t *dst, uint16_t len);
 static void recv_data_processing(uint8_t s, uint8_t *data, uint16_t len, uint8_t peek);
 
@@ -103,7 +104,8 @@ makesocket:
 	return s;
 }
 
-
+// Return the socket's status
+//
 uint8_t socketStatus(uint8_t s)
 {
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
@@ -112,9 +114,9 @@ uint8_t socketStatus(uint8_t s)
 	return status;
 }
 
-/**
- * @brief	This function close the socket and parameter is "s" which represent the socket number
- */
+// Immediately close.  If a TCP connection is established, the
+// remote host is left unaware we closed.
+//
 void socketClose(uint8_t s)
 {
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
@@ -123,10 +125,8 @@ void socketClose(uint8_t s)
 }
 
 
-/**
- * @brief	This function established  the connection for the channel in passive (server) mode. This function waits for the request from the peer.
- * @return	1 for success else 0.
- */
+// Place the socket in listening (server) mode
+//
 uint8_t socketListen(uint8_t s)
 {
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
@@ -140,9 +140,8 @@ uint8_t socketListen(uint8_t s)
 }
 
 
-/**
- * @brief	This function established  the connection for the channel in Active (client) mode.
- */
+// establish a TCP connection in Active (client) mode.
+//
 void socketConnect(uint8_t s, uint8_t * addr, uint16_t port)
 {
 	// set destination IP
@@ -155,10 +154,8 @@ void socketConnect(uint8_t s, uint8_t * addr, uint16_t port)
 
 
 
-/**
- * @brief	This function used for disconnect the socket and parameter is "s" which represent the socket number
- * @return	1 for success else 0.
- */
+// Gracefully disconnect a TCP connection.
+//
 void socketDisconnect(uint8_t s)
 {
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
@@ -169,21 +166,9 @@ void socketDisconnect(uint8_t s)
 
 
 /*****************************************/
-/*         Socket Data Functions         */
+/*    Socket Data Receive Functions      */
 /*****************************************/
 
-
-static uint16_t getTXFreeSize(uint8_t s)
-{
-        uint16_t val, prev;
-
-        prev = W5100.readSnTX_FSR(s);
-        while (1) {
-                val = W5100.readSnTX_FSR(s);
-                if (val == prev) return val;
-                prev = val;
-        }
-}
 
 static uint16_t getRXReceivedSize(uint8_t s)
 {
@@ -197,25 +182,6 @@ static uint16_t getRXReceivedSize(uint8_t s)
         }
 }
 
-
-static void send_data_processing(uint8_t s, uint16_t data_offset, const uint8_t *data, uint16_t len)
-{
-	uint16_t ptr = W5100.readSnTX_WR(s);
-	ptr += data_offset;
-	uint16_t offset = ptr & W5100.SMASK;
-	uint16_t dstAddr = offset + W5100.SBASE[s];
-
-	if (offset + len > W5100.SSIZE) {
-		// Wrap around circular buffer
-		uint16_t size = W5100.SSIZE - offset;
-		W5100.write(dstAddr, data, size);
-		W5100.write(W5100.SBASE[s], data + size, len - size);
-	} else {
-		W5100.write(dstAddr, data, len);
-	}
-	ptr += len;
-	W5100.writeSnTX_WR(s, ptr);
-}
 
 
 static void read_data(uint8_t s, uint16_t src, volatile uint8_t *dst, uint16_t len)
@@ -248,6 +214,95 @@ static void recv_data_processing(uint8_t s, uint8_t *data, uint16_t len, uint8_t
 	}
 }
 
+
+// Receive data.  Returns size, or -1 for no data, or 0 if connection closed
+//
+int socketRecv(uint8_t s, uint8_t *buf, int16_t len)
+{
+	// Check how much data is available
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	int16_t ret = getRXReceivedSize(s);
+	if (ret == 0) {
+		// No data available.
+		uint8_t status = W5100.readSnSR(s);
+		if ( status == SnSR::LISTEN || status == SnSR::CLOSED ||
+		  status == SnSR::CLOSE_WAIT ) {
+			// The remote end has closed its side of the connection,
+			// so this is the eof state
+			ret = 0;
+		} else {
+			// The connection is still up, but there's no data waiting to be read
+			ret = -1;
+		}
+	} else if (ret > len) {
+		ret = len;
+	}
+
+	if (ret > 0) {
+		recv_data_processing(s, buf, ret, 0);
+		W5100.execCmdSn(s, Sock_RECV);
+	}
+	SPI.endTransaction();
+	return ret;
+}
+
+uint16_t socketRecvAvailable(uint8_t s)
+{
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	uint16_t ret = getRXReceivedSize(s);
+	//uint8_t ir = W5100.readSnIR(s);
+	SPI.endTransaction();
+	//Serial.printf("sock.recvAvailable s=%d, ir=%02X, num=%d\n", s, ir, ret);
+	return ret;
+}
+
+// get the first byte in the receive queue (no checking)
+//
+uint16_t socketPeek(uint8_t s, uint8_t *buf)
+{
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	recv_data_processing(s, buf, 1, 1);
+	SPI.endTransaction();
+	return 1;
+}
+
+
+
+/*****************************************/
+/*    Socket Data Transmit Functions     */
+/*****************************************/
+
+static uint16_t getTXFreeSize(uint8_t s)
+{
+        uint16_t val, prev;
+
+        prev = W5100.readSnTX_FSR(s);
+        while (1) {
+                val = W5100.readSnTX_FSR(s);
+                if (val == prev) return val;
+                prev = val;
+        }
+}
+
+
+static void send_data_processing(uint8_t s, uint16_t data_offset, const uint8_t *data, uint16_t len)
+{
+	uint16_t ptr = W5100.readSnTX_WR(s);
+	ptr += data_offset;
+	uint16_t offset = ptr & W5100.SMASK;
+	uint16_t dstAddr = offset + W5100.SBASE[s];
+
+	if (offset + len > W5100.SSIZE) {
+		// Wrap around circular buffer
+		uint16_t size = W5100.SSIZE - offset;
+		W5100.write(dstAddr, data, size);
+		W5100.write(W5100.SBASE[s], data + size, len - size);
+	} else {
+		W5100.write(dstAddr, data, len);
+	}
+	ptr += len;
+	W5100.writeSnTX_WR(s, ptr);
+}
 
 
 /**
@@ -299,63 +354,6 @@ uint16_t socketSend(uint8_t s, const uint8_t * buf, uint16_t len)
 	W5100.writeSnIR(s, SnIR::SEND_OK);
 	SPI.endTransaction();
 	return ret;
-}
-
-
-/**
- * @brief	This function is an application I/F function which is used to receive the data in TCP mode.
- * 		It continues to wait for data as much as the application wants to receive.
- *
- * @return	received data size for success else -1.
- */
-int socketRecv(uint8_t s, uint8_t *buf, int16_t len)
-{
-	// Check how much data is available
-	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	int16_t ret = getRXReceivedSize(s);
-	if (ret == 0) {
-		// No data available.
-		uint8_t status = W5100.readSnSR(s);
-		if ( status == SnSR::LISTEN || status == SnSR::CLOSED || status == SnSR::CLOSE_WAIT ) {
-			// The remote end has closed its side of the connection, so this is the eof state
-			ret = 0;
-		} else {
-			// The connection is still up, but there's no data waiting to be read
-			ret = -1;
-		}
-	} else if (ret > len) {
-		ret = len;
-	}
-
-	if (ret > 0) {
-		recv_data_processing(s, buf, ret, 0);
-		W5100.execCmdSn(s, Sock_RECV);
-	}
-	SPI.endTransaction();
-	return ret;
-}
-
-uint16_t socketRecvAvailable(uint8_t s)
-{
-	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	uint16_t ret = getRXReceivedSize(s);
-	//uint8_t ir = W5100.readSnIR(s);
-	SPI.endTransaction();
-	//Serial.printf("sock.recvAvailable s=%d, ir=%02X, num=%d\n", s, ir, ret);
-	return ret;
-}
-
-/**
- * @brief	Returns the first byte in the receive queue (no checking)
- *
- * @return
- */
-uint16_t socketPeek(uint8_t s, uint8_t *buf)
-{
-	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	recv_data_processing(s, buf, 1, 1);
-	SPI.endTransaction();
-	return 1;
 }
 
 
