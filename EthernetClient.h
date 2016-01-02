@@ -9,8 +9,8 @@
 class EthernetClient : public Client {
 
 public:
-  EthernetClient() { };
-  EthernetClient(W5000socket &socket) { sock.moveTo(socket); }
+  EthernetClient() : sockindex(MAX_SOCK_NUM) { };
+  EthernetClient(uint8_t s) : sockindex(s) { };
 
   uint8_t status();
   virtual int connect(IPAddress ip, uint16_t port);
@@ -24,23 +24,19 @@ public:
   virtual void flush();
   virtual void stop();
   virtual uint8_t connected();
-  virtual operator bool() { return (bool)sock; }
+  virtual operator bool() { return sockindex < MAX_SOCK_NUM; }
   virtual bool operator==(const bool value) { return bool() == value; }
   virtual bool operator!=(const bool value) { return bool() != value; }
   virtual bool operator==(const EthernetClient&);
   virtual bool operator!=(const EthernetClient& rhs) { return !this->operator==(rhs); };
-  uint8_t getSocketNumber() const { return sock.getSocketNumber(); }
+  uint8_t getSocketNumber() const { return sockindex; }
 
   friend class EthernetServer;
   
   using Print::write;
 
 private:
-	//uint16_t recv_count;
-	//uint16_t recv_offset;
-	//uint8_t  recv_buffer_count;
-	//uint8_t  recv_buffer[15];
-	W5000socket sock;
+	uint8_t sockindex;
 	static uint16_t srcport;
 };
 
