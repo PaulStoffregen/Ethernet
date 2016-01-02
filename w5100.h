@@ -92,44 +92,6 @@ class W5100Class {
 public:
   static uint8_t init(void);
 
-  /**
-   * @brief	This function is being used for copy the data form Receive buffer of the chip to application buffer.
-   * 
-   * It calculate the actual physical address where one has to read
-   * the data from Receive buffer. Here also take care of the condition while it exceed
-   * the Rx memory uper-bound of socket.
-   */
-  //static void read_data(SOCKET s, uint16_t src, volatile uint8_t * dst, uint16_t len);
-  
-  /**
-   * @brief	 This function is being called by send() and sendto() function also. 
-   * 
-   * This function read the Tx write pointer register and after copy the data in buffer update the Tx write pointer
-   * register. User should read upper byte first and lower byte later to get proper value.
-   */
-  //static void send_data_processing(SOCKET s, const uint8_t *data, uint16_t len);
-  /**
-   * @brief A copy of send_data_processing that uses the provided ptr for the
-   *        write offset.  Only needed for the "streaming" UDP API, where
-   *        a single UDP packet is built up over a number of calls to
-   *        send_data_processing_ptr, because TX_WR doesn't seem to get updated
-   *        correctly in those scenarios
-   * @param ptr value to use in place of TX_WR.  If 0, then the value is read
-   *        in from TX_WR
-   * @return New value for ptr, to be used in the next call
-   */
-// FIXME Update documentation
-  //static void send_data_processing_offset(SOCKET s, uint16_t data_offset, const uint8_t *data, uint16_t len);
-
-  /**
-   * @brief	This function is being called by recv() also.
-   * 
-   * This function read the Rx read pointer register
-   * and after copy the data from receive buffer update the Rx write pointer register.
-   * User should read upper byte first and lower byte later to get proper value.
-   */
-  //static void recv_data_processing(SOCKET s, uint8_t *data, uint16_t len, uint8_t peek = 0);
-
   inline void setGatewayIp(const uint8_t * addr) { writeGAR(addr); }
   inline void getGatewayIp(uint8_t * addr) { readGAR(addr); }
 
@@ -146,10 +108,7 @@ public:
   inline void setRetransmissionCount(uint8_t retry) { writeRCR(retry); }
 
   static void execCmdSn(SOCKET s, SockCMD _cmd);
-  
-  //static uint16_t getTXFreeSize(SOCKET s);
-  //static uint16_t getRXReceivedSize(SOCKET s);
-  
+
 
   // W5100 Registers
   // ---------------
@@ -165,7 +124,7 @@ public:
     read(addr, &data, 1);
     return data;
   }
-  
+
 #define __GP_REGISTER8(name, address)             \
   static inline void write##name(uint8_t _data) { \
     write(address, _data);                        \
@@ -210,7 +169,7 @@ public:
   __GP_REGISTER8 (PMAGIC, 0x0029);    // PPP LCP Magic Number
   __GP_REGISTER_N(UIPR,   0x002A, 4); // Unreachable IP address in UDP mode (W5100 only)
   __GP_REGISTER16(UPORT,  0x002E);    // Unreachable Port address in UDP mode (W5100 only)
-  
+
 #undef __GP_REGISTER8
 #undef __GP_REGISTER16
 #undef __GP_REGISTER_N
@@ -260,7 +219,7 @@ private:
   static uint16_t read##name(SOCKET _s, uint8_t *_buff) {    \
     return readSn(_s, address, _buff, size);                 \
   }
-  
+
 public:
   __SOCKET_REGISTER8(SnMR,        0x0000)        // Mode
   __SOCKET_REGISTER8(SnCR,        0x0001)        // Command
@@ -282,7 +241,7 @@ public:
   __SOCKET_REGISTER16(SnRX_RSR,   0x0026)        // RX Free Size
   __SOCKET_REGISTER16(SnRX_RD,    0x0028)        // RX Read Pointer
   __SOCKET_REGISTER16(SnRX_WR,    0x002A)        // RX Write Pointer (supported?)
-  
+
 #undef __SOCKET_REGISTER8
 #undef __SOCKET_REGISTER16
 #undef __SOCKET_REGISTER_N
@@ -313,15 +272,15 @@ private:
 #elif defined(__AVR_ATmega32U4__) && defined(CORE_TEENSY)
   inline static void initSS()    { DDRB  |=  _BV(0); };
   inline static void setSS()     { PORTB &= ~_BV(0); };
-  inline static void resetSS()   { PORTB |=  _BV(0); }; 
+  inline static void resetSS()   { PORTB |=  _BV(0); };
 #elif defined(__AVR_ATmega32U4__)
   inline static void initSS()    { DDRB  |=  _BV(6); };
   inline static void setSS()     { PORTB &= ~_BV(6); };
-  inline static void resetSS()   { PORTB |=  _BV(6); }; 
+  inline static void resetSS()   { PORTB |=  _BV(6); };
 #elif defined(__AVR_AT90USB1286__) || defined(__AVR_AT90USB646__) || defined(__AVR_AT90USB162__)
   inline static void initSS()    { DDRB  |=  _BV(0); };
   inline static void setSS()     { PORTB &= ~_BV(0); };
-  inline static void resetSS()   { PORTB |=  _BV(0); }; 
+  inline static void resetSS()   { PORTB |=  _BV(0); };
 #elif defined(__MK20DX128__) || defined(__MK20DX256__)
   inline static void initSS()    { pinMode(10, OUTPUT); };
   inline static void setSS()     { digitalWriteFast(10, LOW); };

@@ -21,6 +21,13 @@ typedef struct {
 static socketstate_t state[MAX_SOCK_NUM];
 
 
+static uint16_t getTXFreeSize(uint8_t s);
+static uint16_t getRXReceivedSize(uint8_t s);
+static void send_data_processing(uint8_t s, uint16_t data_offset, const uint8_t *data, uint16_t len);
+static void read_data(uint8_t s, uint16_t src, volatile uint8_t *dst, uint16_t len);
+static void recv_data_processing(uint8_t s, uint8_t *data, uint16_t len, uint8_t peek);
+
+
 
 /*****************************************/
 /*          Socket management            */
@@ -191,7 +198,7 @@ static uint16_t getRXReceivedSize(uint8_t s)
 }
 
 
-static void send_data_processing_offset(uint8_t s, uint16_t data_offset, const uint8_t *data, uint16_t len)
+static void send_data_processing(uint8_t s, uint16_t data_offset, const uint8_t *data, uint16_t len)
 {
 	uint16_t ptr = W5100.readSnTX_WR(s);
 	ptr += data_offset;
@@ -210,11 +217,6 @@ static void send_data_processing_offset(uint8_t s, uint16_t data_offset, const u
 	W5100.writeSnTX_WR(s, ptr);
 }
 
-static void send_data_processing(uint8_t s, const uint8_t *data, uint16_t len)
-{
-	// This is same as having no offset in a call to send_data_processing_offset
-	send_data_processing_offset(s, 0, data, len);
-}
 
 static void read_data(uint8_t s, uint16_t src, volatile uint8_t *dst, uint16_t len)
 {
@@ -279,7 +281,7 @@ uint16_t socketSend(uint8_t s, const uint8_t * buf, uint16_t len)
 
 	// copy data
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	send_data_processing(s, (uint8_t *)buf, ret);
+	send_data_processing(s, 0, (uint8_t *)buf, ret);
 	W5100.execCmdSn(s, Sock_SEND);
 
 	/* +2008.01 bj */
@@ -379,7 +381,7 @@ uint16_t socketSendto(uint8_t s, const uint8_t *buf, uint16_t len, uint8_t *addr
 	W5100.writeSnDPORT(s, port);
 
 	// copy data
-	send_data_processing(s, (uint8_t *)buf, ret);
+	send_data_processing(s, 0, (uint8_t *)buf, ret);
 	W5100.execCmdSn(s, Sock_SEND);
 
 	while ( (W5100.readSnIR(s) & SnIR::SEND_OK) != SnIR::SEND_OK ) {
@@ -484,7 +486,7 @@ uint16_t socketBufferData(uint8_t s, uint16_t offset, const uint8_t* buf, uint16
 	} else {
 		ret = len;
 	}
-	send_data_processing_offset(s, offset, buf, ret);
+	send_data_processing(s, offset, buf, ret);
 	SPI.endTransaction();
 	return ret;
 }
