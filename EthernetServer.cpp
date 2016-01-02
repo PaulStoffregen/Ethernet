@@ -13,9 +13,9 @@ uint16_t EthernetServer::server_port[MAX_SOCK_NUM];
 
 void EthernetServer::begin()
 {
-	sockindex = ::begin(SnMR::TCP, _port);
+	sockindex = socketBegin(SnMR::TCP, _port);
 	if (sockindex < MAX_SOCK_NUM) {
-		listen(sockindex);
+		socketListen(sockindex);
 		server_port[sockindex] = _port;
 	}
 }
@@ -28,8 +28,8 @@ void EthernetServer::accept()
 		uint8_t status = socketStatus(sockindex);
 		if (status == SnSR::LISTEN) {
 			listening = true;
-		} else if (status == SnSR::CLOSE_WAIT && recvAvailable(sockindex) <= 0) {
-			disconnect(sockindex);
+		} else if (status == SnSR::CLOSE_WAIT && socketRecvAvailable(sockindex) <= 0) {
+			socketDisconnect(sockindex);
 		}
 	}
 	if (!listening) begin();
@@ -42,7 +42,7 @@ EthernetClient EthernetServer::available()
 		if (server_port[i] == _port) {
 			uint8_t stat = socketStatus(i);
 			if (stat == SnSR::ESTABLISHED || stat == SnSR::CLOSE_WAIT) {
-				if (recvAvailable(i) > 0) {
+				if (socketRecvAvailable(i) > 0) {
 					EthernetClient client(i);
 					return client;
 				}
@@ -63,7 +63,7 @@ size_t EthernetServer::write(const uint8_t *buffer, size_t size)
 	for (uint8_t i=0; i < MAX_SOCK_NUM; i++) {
 		if (server_port[i] == _port) {
 			if (socketStatus(i) == SnSR::ESTABLISHED) {
-				send(i, buffer, size);
+				socketSend(i, buffer, size);
 			}
 		}
 	}

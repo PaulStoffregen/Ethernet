@@ -13,7 +13,7 @@ extern void yield(void);
 
 static uint16_t local_port;
 
-uint8_t begin(uint8_t protocol, uint16_t port)
+uint8_t socketBegin(uint8_t protocol, uint16_t port)
 {
 	//Serial.printf("W5000socket begin, protocol=%d, port=%d\n", protocol, port);
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
@@ -93,7 +93,7 @@ uint8_t socketStatus(uint8_t s)
 /**
  * @brief	This function close the socket and parameter is "s" which represent the socket number
  */
-void close(uint8_t s)
+void socketClose(uint8_t s)
 {
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
 	W5100.execCmdSn(s, Sock_CLOSE);
@@ -105,7 +105,7 @@ void close(uint8_t s)
  * @brief	This function established  the connection for the channel in passive (server) mode. This function waits for the request from the peer.
  * @return	1 for success else 0.
  */
-uint8_t listen(uint8_t s)
+uint8_t socketListen(uint8_t s)
 {
   SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
   if (W5100.readSnSR(s) != SnSR::INIT) {
@@ -121,7 +121,7 @@ uint8_t listen(uint8_t s)
 /**
  * @brief	This function established  the connection for the channel in Active (client) mode. 
  */
-void connect(uint8_t s, uint8_t * addr, uint16_t port)
+void socketConnect(uint8_t s, uint8_t * addr, uint16_t port)
 {
   // set destination IP
   SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
@@ -137,7 +137,7 @@ void connect(uint8_t s, uint8_t * addr, uint16_t port)
  * @brief	This function used for disconnect the socket and parameter is "s" which represent the socket number
  * @return	1 for success else 0.
  */
-void disconnect(uint8_t s)
+void socketDisconnect(uint8_t s)
 {
   SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
   W5100.execCmdSn(s, Sock_DISCON);
@@ -149,7 +149,7 @@ void disconnect(uint8_t s)
  * @brief	This function used to send the data in TCP mode
  * @return	1 for success else 0.
  */
-uint16_t send(uint8_t s, const uint8_t * buf, uint16_t len)
+uint16_t socketSend(uint8_t s, const uint8_t * buf, uint16_t len)
 {
   uint8_t status=0;
   uint16_t ret=0;
@@ -204,7 +204,7 @@ uint16_t send(uint8_t s, const uint8_t * buf, uint16_t len)
  * 		
  * @return	received data size for success else -1.
  */
-int16_t recv(uint8_t s, uint8_t *buf, int16_t len)
+int16_t socketRecv(uint8_t s, uint8_t *buf, int16_t len)
 {
   // Check how much data is available
   SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
@@ -231,14 +231,7 @@ int16_t recv(uint8_t s, uint8_t *buf, int16_t len)
   return ret;
 }
 
-void read_data(uint8_t s, uint16_t src, volatile uint8_t *dst, uint16_t len)
-{
-	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	W5100.read_data(s, src, dst, len);
-	SPI.endTransaction();
-}
-
-uint16_t recvAvailable(uint8_t s)
+uint16_t socketRecvAvailable(uint8_t s)
 {
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
 	uint16_t ret = W5100.getRXReceivedSize(s);
@@ -247,8 +240,15 @@ uint16_t recvAvailable(uint8_t s)
 	//Serial.printf("sock.recvAvailable s=%d, ir=%02X, num=%d\n", s, ir, ret);
 	return ret;
 }
+/*
+void socketRead_data(uint8_t s, uint16_t src, volatile uint8_t *dst, uint16_t len)
+{
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	W5100.read_data(s, src, dst, len);
+	SPI.endTransaction();
+}
 
-uint16_t recvOffset(uint8_t s)
+uint16_t socketRecvOffset(uint8_t s)
 {
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
 	uint16_t ret = W5100.readSnRX_RD(s);
@@ -256,21 +256,21 @@ uint16_t recvOffset(uint8_t s)
 	return ret;
 }
 
-void updateRecvOffset(uint8_t s, uint16_t offset)
+void socketupdateRecvOffset(uint8_t s, uint16_t offset)
 {
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
 	W5100.writeSnRX_RD(s, offset);
 	W5100.execCmdSn(s, Sock_RECV);
 	SPI.endTransaction();
 }
-
+*/
 
 /**
  * @brief	Returns the first byte in the receive queue (no checking)
  * 		
  * @return
  */
-uint16_t peek(uint8_t s, uint8_t *buf)
+uint16_t socketPeek(uint8_t s, uint8_t *buf)
 {
   SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
   W5100.recv_data_processing(s, buf, 1, 1);
@@ -285,7 +285,7 @@ uint16_t peek(uint8_t s, uint8_t *buf)
  * 		
  * @return	This function return send data size for success else -1.
  */
-uint16_t sendto(uint8_t s, const uint8_t *buf, uint16_t len, uint8_t *addr, uint16_t port)
+uint16_t socketSendto(uint8_t s, const uint8_t *buf, uint16_t len, uint8_t *addr, uint16_t port)
 {
   uint16_t ret=0;
 
@@ -340,7 +340,7 @@ uint16_t sendto(uint8_t s, const uint8_t *buf, uint16_t len, uint8_t *addr, uint
  * 	
  * @return	This function return received data size for success else -1.
  */
-uint16_t recvfrom(uint8_t s, uint8_t *buf, uint16_t len, uint8_t *addr, uint16_t *port)
+uint16_t socketRecvfrom(uint8_t s, uint8_t *buf, uint16_t len, uint8_t *addr, uint16_t *port)
 {
   uint8_t head[8];
   uint16_t data_len=0;
@@ -408,7 +408,7 @@ uint16_t recvfrom(uint8_t s, uint8_t *buf, uint16_t len, uint8_t *addr, uint16_t
   return data_len;
 }
 
-uint16_t bufferData(uint8_t s, uint16_t offset, const uint8_t* buf, uint16_t len)
+uint16_t socketBufferData(uint8_t s, uint16_t offset, const uint8_t* buf, uint16_t len)
 {
 	//Serial.printf("  bufferData, offset=%d, len=%d\n", offset, len);
   uint16_t ret =0;
@@ -423,7 +423,7 @@ uint16_t bufferData(uint8_t s, uint16_t offset, const uint8_t* buf, uint16_t len
   return ret;
 }
 
-int startUDP(uint8_t s, uint8_t* addr, uint16_t port)
+int socketStartUDP(uint8_t s, uint8_t* addr, uint16_t port)
 {
   if (
      ((addr[0] == 0x00) && (addr[1] == 0x00) && (addr[2] == 0x00) && (addr[3] == 0x00)) ||
@@ -440,7 +440,7 @@ int startUDP(uint8_t s, uint8_t* addr, uint16_t port)
   }
 }
 
-int sendUDP(uint8_t s)
+int socketSendUDP(uint8_t s)
 {
   SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
   W5100.execCmdSn(s, Sock_SEND);

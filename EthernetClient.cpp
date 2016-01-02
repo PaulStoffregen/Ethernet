@@ -28,9 +28,9 @@ int EthernetClient::connect(IPAddress ip, uint16_t port)
 {
 	if (ip == IPAddress(0ul) || ip == IPAddress(0xFFFFFFFFul)) return 0;
 	if (++srcport == 0) srcport = 49152; // IANA recommended ephemeral range 49152-65535
-	sockindex = begin(SnMR::TCP, srcport);
+	sockindex = socketBegin(SnMR::TCP, srcport);
 	if (sockindex >= MAX_SOCK_NUM) return 0;
-	::connect(sockindex, rawIPAddress(ip), port);
+	socketConnect(sockindex, rawIPAddress(ip), port);
 	while (1) {
 		uint8_t stat = socketStatus(sockindex);
 		if (stat == SnSR::ESTABLISHED) return 1;
@@ -47,7 +47,7 @@ size_t EthernetClient::write(uint8_t b)
 size_t EthernetClient::write(const uint8_t *buf, size_t size)
 {
 	if (sockindex >= MAX_SOCK_NUM) return 0;
-	if (send(sockindex, buf, size)) return size;
+	if (socketSend(sockindex, buf, size)) return size;
 	setWriteError();
 	return 0;
 }
@@ -60,13 +60,13 @@ size_t EthernetClient::write(const uint8_t *buf, size_t size)
 int EthernetClient::available()
 {
 	if (sockindex >= MAX_SOCK_NUM) return 0;
-	return recvAvailable(sockindex);
+	return socketRecvAvailable(sockindex);
 }
 
 int EthernetClient::read(uint8_t *buf, size_t size)
 {
 	if (sockindex >= MAX_SOCK_NUM) return 0;
-	return recv(sockindex, buf, size);
+	return socketRecv(sockindex, buf, size);
 }
 
 int EthernetClient::peek()
@@ -74,14 +74,14 @@ int EthernetClient::peek()
 	if (sockindex >= MAX_SOCK_NUM) return -1;
 	if (!available()) return -1;
 	uint8_t b;
-	::peek(sockindex, &b);
+	socketPeek(sockindex, &b);
 	return b;
 }
 
 int EthernetClient::read()
 {
 	uint8_t b;
-	if (recv(sockindex, &b, 1) > 0) return b;
+	if (socketRecv(sockindex, &b, 1) > 0) return b;
 	return -1;
 }
 
@@ -95,7 +95,7 @@ void EthernetClient::stop()
 	if (sockindex >= MAX_SOCK_NUM) return;
 
 	// attempt to close the connection gracefully (send a FIN to other side)
-	disconnect(sockindex);
+	socketDisconnect(sockindex);
 	unsigned long start = millis();
 
 	// wait up to a second for the connection to close
@@ -105,7 +105,7 @@ void EthernetClient::stop()
 	} while (millis() - start < 1000);
 
 	// if it hasn't closed, close it forcefully
-	close(sockindex);
+	socketClose(sockindex);
 }
 
 uint8_t EthernetClient::connected()

@@ -33,6 +33,11 @@ public:
 
 	friend class EthernetClient;
 	friend class EthernetServer;
+	friend class EthernetUdp;
+
+
+
+
 };
 
 extern EthernetClass Ethernet;
