@@ -99,7 +99,7 @@ public:
    * the data from Receive buffer. Here also take care of the condition while it exceed
    * the Rx memory uper-bound of socket.
    */
-  static void read_data(SOCKET s, uint16_t src, volatile uint8_t * dst, uint16_t len);
+  //static void read_data(SOCKET s, uint16_t src, volatile uint8_t * dst, uint16_t len);
   
   /**
    * @brief	 This function is being called by send() and sendto() function also. 
@@ -107,7 +107,7 @@ public:
    * This function read the Tx write pointer register and after copy the data in buffer update the Tx write pointer
    * register. User should read upper byte first and lower byte later to get proper value.
    */
-  static void send_data_processing(SOCKET s, const uint8_t *data, uint16_t len);
+  //static void send_data_processing(SOCKET s, const uint8_t *data, uint16_t len);
   /**
    * @brief A copy of send_data_processing that uses the provided ptr for the
    *        write offset.  Only needed for the "streaming" UDP API, where
@@ -119,7 +119,7 @@ public:
    * @return New value for ptr, to be used in the next call
    */
 // FIXME Update documentation
-  static void send_data_processing_offset(SOCKET s, uint16_t data_offset, const uint8_t *data, uint16_t len);
+  //static void send_data_processing_offset(SOCKET s, uint16_t data_offset, const uint8_t *data, uint16_t len);
 
   /**
    * @brief	This function is being called by recv() also.
@@ -128,7 +128,7 @@ public:
    * and after copy the data from receive buffer update the Rx write pointer register.
    * User should read upper byte first and lower byte later to get proper value.
    */
-  static void recv_data_processing(SOCKET s, uint8_t *data, uint16_t len, uint8_t peek = 0);
+  //static void recv_data_processing(SOCKET s, uint8_t *data, uint16_t len, uint8_t peek = 0);
 
   inline void setGatewayIp(const uint8_t * addr) { writeGAR(addr); }
   inline void getGatewayIp(uint8_t * addr) { readGAR(addr); }
@@ -147,13 +147,14 @@ public:
 
   static void execCmdSn(SOCKET s, SockCMD _cmd);
   
-  static uint16_t getTXFreeSize(SOCKET s);
-  static uint16_t getRXReceivedSize(SOCKET s);
+  //static uint16_t getTXFreeSize(SOCKET s);
+  //static uint16_t getRXReceivedSize(SOCKET s);
   
 
   // W5100 Registers
   // ---------------
-private:
+//private:
+public:
   static uint16_t write(uint16_t addr, const uint8_t *buf, uint16_t len);
   static uint8_t write(uint16_t addr, uint8_t data) {
     return write(addr, &data, 1);
@@ -299,7 +300,7 @@ public:
   static const int SOCKETS = 4;
   static uint16_t SMASK;
   static uint16_t SSIZE;
-private:
+//private:
   //receive and transmit have same buffer sizes
   static uint16_t SBASE[SOCKETS]; // Tx buffer base address
   static uint16_t RBASE[SOCKETS]; // Rx buffer base address

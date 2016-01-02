@@ -13,6 +13,20 @@ extern void yield(void);
 
 static uint16_t local_port;
 
+typedef struct {
+	uint16_t RX_RSR;
+	uint16_t RX_RD;
+} socketstate_t;
+
+static socketstate_t state[MAX_SOCK_NUM];
+
+
+
+/*****************************************/
+/*          Socket management            */
+/*****************************************/
+
+
 uint8_t socketBegin(uint8_t protocol, uint16_t port)
 {
 	//Serial.printf("W5000socket begin, protocol=%d, port=%d\n", protocol, port);
@@ -35,7 +49,7 @@ uint8_t socketBegin(uint8_t protocol, uint16_t port)
 		status[s] = stat;
 	}
 #endif
-	// look at all the hardware sockets, use any closed 
+	// look at all the hardware sockets, use any closed
 	for (s=0; s < MAX_SOCK_NUM; s++) {
 		status[s] = W5100.readSnSR(s);
 		if (status[s] == SnSR::CLOSED) goto makesocket;
@@ -76,6 +90,7 @@ makesocket:
 		W5100.writeSnPORT(s, ++local_port);
 	}
 	W5100.execCmdSn(s, Sock_OPEN);
+	//state[s] = W5100.
 	//Serial.printf("W5000socket prot=%d\n", W5100.readSnMR(s));
 	SPI.endTransaction();
 	return s;
@@ -107,28 +122,28 @@ void socketClose(uint8_t s)
  */
 uint8_t socketListen(uint8_t s)
 {
-  SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-  if (W5100.readSnSR(s) != SnSR::INIT) {
-    SPI.endTransaction();
-    return 0;
-  }
-  W5100.execCmdSn(s, Sock_LISTEN);
-  SPI.endTransaction();
-  return 1;
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	if (W5100.readSnSR(s) != SnSR::INIT) {
+		SPI.endTransaction();
+		return 0;
+	}
+	W5100.execCmdSn(s, Sock_LISTEN);
+	SPI.endTransaction();
+	return 1;
 }
 
 
 /**
- * @brief	This function established  the connection for the channel in Active (client) mode. 
+ * @brief	This function established  the connection for the channel in Active (client) mode.
  */
 void socketConnect(uint8_t s, uint8_t * addr, uint16_t port)
 {
-  // set destination IP
-  SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-  W5100.writeSnDIPR(s, addr);
-  W5100.writeSnDPORT(s, port);
-  W5100.execCmdSn(s, Sock_CONNECT);
-  SPI.endTransaction();
+	// set destination IP
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	W5100.writeSnDIPR(s, addr);
+	W5100.writeSnDPORT(s, port);
+	W5100.execCmdSn(s, Sock_CONNECT);
+	SPI.endTransaction();
 }
 
 
@@ -139,10 +154,98 @@ void socketConnect(uint8_t s, uint8_t * addr, uint16_t port)
  */
 void socketDisconnect(uint8_t s)
 {
-  SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-  W5100.execCmdSn(s, Sock_DISCON);
-  SPI.endTransaction();
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	W5100.execCmdSn(s, Sock_DISCON);
+	SPI.endTransaction();
 }
+
+
+
+/*****************************************/
+/*         Socket Data Functions         */
+/*****************************************/
+
+
+static uint16_t getTXFreeSize(uint8_t s)
+{
+        uint16_t val, prev;
+
+        prev = W5100.readSnTX_FSR(s);
+        while (1) {
+                val = W5100.readSnTX_FSR(s);
+                if (val == prev) return val;
+                prev = val;
+        }
+}
+
+static uint16_t getRXReceivedSize(uint8_t s)
+{
+        uint16_t val, prev;
+
+        prev = W5100.readSnRX_RSR(s);
+        while (1) {
+                val = W5100.readSnRX_RSR(s);
+                if (val == prev) return val;
+                prev = val;
+        }
+}
+
+
+static void send_data_processing_offset(uint8_t s, uint16_t data_offset, const uint8_t *data, uint16_t len)
+{
+	uint16_t ptr = W5100.readSnTX_WR(s);
+	ptr += data_offset;
+	uint16_t offset = ptr & W5100.SMASK;
+	uint16_t dstAddr = offset + W5100.SBASE[s];
+
+	if (offset + len > W5100.SSIZE) {
+		// Wrap around circular buffer
+		uint16_t size = W5100.SSIZE - offset;
+		W5100.write(dstAddr, data, size);
+		W5100.write(W5100.SBASE[s], data + size, len - size);
+	} else {
+		W5100.write(dstAddr, data, len);
+	}
+	ptr += len;
+	W5100.writeSnTX_WR(s, ptr);
+}
+
+static void send_data_processing(uint8_t s, const uint8_t *data, uint16_t len)
+{
+	// This is same as having no offset in a call to send_data_processing_offset
+	send_data_processing_offset(s, 0, data, len);
+}
+
+static void read_data(uint8_t s, uint16_t src, volatile uint8_t *dst, uint16_t len)
+{
+	uint16_t size;
+	uint16_t src_mask;
+	uint16_t src_ptr;
+
+	src_mask = (uint16_t)src & W5100.SMASK;
+	src_ptr = W5100.RBASE[s] + src_mask;
+
+	if ((src_mask + len) > W5100.SSIZE) {
+		size = W5100.SSIZE - src_mask;
+		W5100.read(src_ptr, (uint8_t *)dst, size);
+		dst += size;
+		W5100.read(W5100.RBASE[s], (uint8_t *) dst, len - size);
+	} else {
+		W5100.read(src_ptr, (uint8_t *) dst, len);
+	}
+}
+
+static void recv_data_processing(uint8_t s, uint8_t *data, uint16_t len, uint8_t peek)
+{
+	uint16_t ptr;
+	ptr = W5100.readSnRX_RD(s);
+	read_data(s, ptr, data, len);
+	if (!peek) {
+		ptr += len;
+		W5100.writeSnRX_RD(s, ptr);
+	}
+}
+
 
 
 /**
@@ -151,193 +254,155 @@ void socketDisconnect(uint8_t s)
  */
 uint16_t socketSend(uint8_t s, const uint8_t * buf, uint16_t len)
 {
-  uint8_t status=0;
-  uint16_t ret=0;
-  uint16_t freesize=0;
+	uint8_t status=0;
+	uint16_t ret=0;
+	uint16_t freesize=0;
 
-  if (len > W5100.SSIZE) 
-    ret = W5100.SSIZE; // check size not to exceed MAX size.
-  else 
-    ret = len;
+	if (len > W5100.SSIZE) {
+		ret = W5100.SSIZE; // check size not to exceed MAX size.
+	} else {
+		ret = len;
+	}
 
-  // if freebuf is available, start.
-  do {
-    SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-    freesize = W5100.getTXFreeSize(s);
-    status = W5100.readSnSR(s);
-    SPI.endTransaction();
-    if ((status != SnSR::ESTABLISHED) && (status != SnSR::CLOSE_WAIT))
-    {
-      ret = 0; 
-      break;
-    }
-    yield();
-  }
-  while (freesize < ret);
+	// if freebuf is available, start.
+	do {
+		SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+		freesize = getTXFreeSize(s);
+		status = W5100.readSnSR(s);
+		SPI.endTransaction();
+		if ((status != SnSR::ESTABLISHED) && (status != SnSR::CLOSE_WAIT)) {
+			ret = 0;
+			break;
+		}
+		yield();
+	} while (freesize < ret);
 
-  // copy data
-  SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-  W5100.send_data_processing(s, (uint8_t *)buf, ret);
-  W5100.execCmdSn(s, Sock_SEND);
+	// copy data
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	send_data_processing(s, (uint8_t *)buf, ret);
+	W5100.execCmdSn(s, Sock_SEND);
 
-  /* +2008.01 bj */
-  while ( (W5100.readSnIR(s) & SnIR::SEND_OK) != SnIR::SEND_OK ) {
-    /* m2008.01 [bj] : reduce code */
-    if ( W5100.readSnSR(s) == SnSR::CLOSED ) {
-      SPI.endTransaction();
-      return 0;
-    }
-    SPI.endTransaction();
-    yield();
-    SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-  }
-  /* +2008.01 bj */
-  W5100.writeSnIR(s, SnIR::SEND_OK);
-  SPI.endTransaction();
-  return ret;
+	/* +2008.01 bj */
+	while ( (W5100.readSnIR(s) & SnIR::SEND_OK) != SnIR::SEND_OK ) {
+		/* m2008.01 [bj] : reduce code */
+		if ( W5100.readSnSR(s) == SnSR::CLOSED ) {
+			SPI.endTransaction();
+			return 0;
+		}
+		SPI.endTransaction();
+		yield();
+		SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	}
+	/* +2008.01 bj */
+	W5100.writeSnIR(s, SnIR::SEND_OK);
+	SPI.endTransaction();
+	return ret;
 }
 
 
 /**
  * @brief	This function is an application I/F function which is used to receive the data in TCP mode.
  * 		It continues to wait for data as much as the application wants to receive.
- * 		
+ *
  * @return	received data size for success else -1.
  */
-int16_t socketRecv(uint8_t s, uint8_t *buf, int16_t len)
+int socketRecv(uint8_t s, uint8_t *buf, int16_t len)
 {
-  // Check how much data is available
-  SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-  int16_t ret = W5100.getRXReceivedSize(s);
-  if ( ret == 0 ) {
-    // No data available.
-    uint8_t status = W5100.readSnSR(s);
-    if ( status == SnSR::LISTEN || status == SnSR::CLOSED || status == SnSR::CLOSE_WAIT ) {
-      // The remote end has closed its side of the connection, so this is the eof state
-      ret = 0;
-    } else {
-      // The connection is still up, but there's no data waiting to be read
-      ret = -1;
-    }
-  } else if (ret > len) {
-    ret = len;
-  }
+	// Check how much data is available
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	int16_t ret = getRXReceivedSize(s);
+	if (ret == 0) {
+		// No data available.
+		uint8_t status = W5100.readSnSR(s);
+		if ( status == SnSR::LISTEN || status == SnSR::CLOSED || status == SnSR::CLOSE_WAIT ) {
+			// The remote end has closed its side of the connection, so this is the eof state
+			ret = 0;
+		} else {
+			// The connection is still up, but there's no data waiting to be read
+			ret = -1;
+		}
+	} else if (ret > len) {
+		ret = len;
+	}
 
-  if ( ret > 0 ) {
-    W5100.recv_data_processing(s, buf, ret);
-    W5100.execCmdSn(s, Sock_RECV);
-  }
-  SPI.endTransaction();
-  return ret;
+	if (ret > 0) {
+		recv_data_processing(s, buf, ret, 0);
+		W5100.execCmdSn(s, Sock_RECV);
+	}
+	SPI.endTransaction();
+	return ret;
 }
 
 uint16_t socketRecvAvailable(uint8_t s)
 {
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	uint16_t ret = W5100.getRXReceivedSize(s);
+	uint16_t ret = getRXReceivedSize(s);
 	//uint8_t ir = W5100.readSnIR(s);
 	SPI.endTransaction();
 	//Serial.printf("sock.recvAvailable s=%d, ir=%02X, num=%d\n", s, ir, ret);
 	return ret;
 }
-/*
-void socketRead_data(uint8_t s, uint16_t src, volatile uint8_t *dst, uint16_t len)
-{
-	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	W5100.read_data(s, src, dst, len);
-	SPI.endTransaction();
-}
-
-uint16_t socketRecvOffset(uint8_t s)
-{
-	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	uint16_t ret = W5100.readSnRX_RD(s);
-	SPI.endTransaction();
-	return ret;
-}
-
-void socketupdateRecvOffset(uint8_t s, uint16_t offset)
-{
-	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	W5100.writeSnRX_RD(s, offset);
-	W5100.execCmdSn(s, Sock_RECV);
-	SPI.endTransaction();
-}
-*/
 
 /**
  * @brief	Returns the first byte in the receive queue (no checking)
- * 		
+ *
  * @return
  */
 uint16_t socketPeek(uint8_t s, uint8_t *buf)
 {
-  SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-  W5100.recv_data_processing(s, buf, 1, 1);
-  SPI.endTransaction();
-  return 1;
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	recv_data_processing(s, buf, 1, 1);
+	SPI.endTransaction();
+	return 1;
 }
 
 
 /**
- * @brief	This function is an application I/F function which is used to send the data for other then TCP mode. 
+ * @brief	This function is an application I/F function which is used to send the data for other then TCP mode.
  * 		Unlike TCP transmission, The peer's destination address and the port is needed.
- * 		
+ *
  * @return	This function return send data size for success else -1.
  */
 uint16_t socketSendto(uint8_t s, const uint8_t *buf, uint16_t len, uint8_t *addr, uint16_t port)
 {
-  uint16_t ret=0;
+	uint16_t ret=0;
 
-  if (len > W5100.SSIZE) ret = W5100.SSIZE; // check size not to exceed MAX size.
-  else ret = len;
+	if (len > W5100.SSIZE) ret = W5100.SSIZE; // check size not to exceed MAX size.
+	else ret = len;
 
-  if
-    (
-  ((addr[0] == 0x00) && (addr[1] == 0x00) && (addr[2] == 0x00) && (addr[3] == 0x00)) ||
-    ((port == 0x00)) ||(ret == 0)
-    ) 
-  {
-    /* +2008.01 [bj] : added return value */
-    ret = 0;
-  }
-  else
-  {
-    SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-    W5100.writeSnDIPR(s, addr);
-    W5100.writeSnDPORT(s, port);
+	if ( ((addr[0] == 0x00) && (addr[1] == 0x00) && (addr[2] == 0x00) && (addr[3] == 0x00)) ||
+	((port == 0x00)) ||(ret == 0) ) {
+		return 0;
+	}
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	W5100.writeSnDIPR(s, addr);
+	W5100.writeSnDPORT(s, port);
 
-    // copy data
-    W5100.send_data_processing(s, (uint8_t *)buf, ret);
-    W5100.execCmdSn(s, Sock_SEND);
+	// copy data
+	send_data_processing(s, (uint8_t *)buf, ret);
+	W5100.execCmdSn(s, Sock_SEND);
 
-    /* +2008.01 bj */
-    while ( (W5100.readSnIR(s) & SnIR::SEND_OK) != SnIR::SEND_OK ) 
-    {
-      if (W5100.readSnIR(s) & SnIR::TIMEOUT)
-      {
-        /* +2008.01 [bj]: clear interrupt */
-        W5100.writeSnIR(s, (SnIR::SEND_OK | SnIR::TIMEOUT)); /* clear SEND_OK & TIMEOUT */
-        SPI.endTransaction();
-        return 0;
-      }
-      SPI.endTransaction();
-      yield();
-      SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-    }
-
-    /* +2008.01 bj */
-    W5100.writeSnIR(s, SnIR::SEND_OK);
-    SPI.endTransaction();
-  }
-  return ret;
+	while ( (W5100.readSnIR(s) & SnIR::SEND_OK) != SnIR::SEND_OK ) {
+		if (W5100.readSnIR(s) & SnIR::TIMEOUT) {
+			/* clear SEND_OK & TIMEOUT */
+			W5100.writeSnIR(s, (SnIR::SEND_OK | SnIR::TIMEOUT));
+			SPI.endTransaction();
+		return 0;
+		}
+		SPI.endTransaction();
+		yield();
+		SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	}
+	W5100.writeSnIR(s, SnIR::SEND_OK);
+	SPI.endTransaction();
+	return ret;
 }
 
 
 /**
  * @brief	This function is an application I/F function which is used to receive the data in other then
- * 	TCP mode. This function is used to receive UDP, IP_RAW and MAC_RAW mode, and handle the header as well. 
- * 	
+ * 	TCP mode. This function is used to receive UDP, IP_RAW and MAC_RAW mode, and handle the header as well.
+ *
  * @return	This function return received data size for success else -1.
  */
 uint16_t socketRecvfrom(uint8_t s, uint8_t *buf, uint16_t len, uint8_t *addr, uint16_t *port)
@@ -353,7 +418,7 @@ uint16_t socketRecvfrom(uint8_t s, uint8_t *buf, uint16_t len, uint8_t *addr, ui
     switch (W5100.readSnMR(s) & 0x07)
     {
     case SnMR::UDP :
-      W5100.read_data(s, ptr, head, 0x08);
+      read_data(s, ptr, head, 0x08);
       ptr += 8;
       // read peer's IP address, port number.
       addr[0] = head[0];
@@ -365,14 +430,14 @@ uint16_t socketRecvfrom(uint8_t s, uint8_t *buf, uint16_t len, uint8_t *addr, ui
       data_len = head[6];
       data_len = (data_len << 8) + head[7];
 
-      W5100.read_data(s, ptr, buf, data_len); // data copy.
+      read_data(s, ptr, buf, data_len); // data copy.
       ptr += data_len;
 
       W5100.writeSnRX_RD(s, ptr);
       break;
 
     case SnMR::IPRAW :
-      W5100.read_data(s, ptr, head, 0x06);
+      read_data(s, ptr, head, 0x06);
       ptr += 6;
 
       addr[0] = head[0];
@@ -382,19 +447,19 @@ uint16_t socketRecvfrom(uint8_t s, uint8_t *buf, uint16_t len, uint8_t *addr, ui
       data_len = head[4];
       data_len = (data_len << 8) + head[5];
 
-      W5100.read_data(s, ptr, buf, data_len); // data copy.
+      read_data(s, ptr, buf, data_len); // data copy.
       ptr += data_len;
 
       W5100.writeSnRX_RD(s, ptr);
       break;
 
     case SnMR::MACRAW:
-      W5100.read_data(s, ptr, head, 2);
+      read_data(s, ptr, head, 2);
       ptr+=2;
       data_len = head[0];
       data_len = (data_len<<8) + head[1] - 2;
 
-      W5100.read_data(s, ptr, buf, data_len);
+      read_data(s, ptr, buf, data_len);
       ptr += data_len;
       W5100.writeSnRX_RD(s, ptr);
       break;
@@ -411,60 +476,57 @@ uint16_t socketRecvfrom(uint8_t s, uint8_t *buf, uint16_t len, uint8_t *addr, ui
 uint16_t socketBufferData(uint8_t s, uint16_t offset, const uint8_t* buf, uint16_t len)
 {
 	//Serial.printf("  bufferData, offset=%d, len=%d\n", offset, len);
-  uint16_t ret =0;
-  SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-  if (len > W5100.getTXFreeSize(s)) {
-    ret = W5100.getTXFreeSize(s); // check size not to exceed MAX size.
-  } else {
-    ret = len;
-  }
-  W5100.send_data_processing_offset(s, offset, buf, ret);
-  SPI.endTransaction();
-  return ret;
+	uint16_t ret =0;
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	uint16_t txfree = getTXFreeSize(s);
+	if (len > txfree) {
+		ret = txfree; // check size not to exceed MAX size.
+	} else {
+		ret = len;
+	}
+	send_data_processing_offset(s, offset, buf, ret);
+	SPI.endTransaction();
+	return ret;
 }
 
 int socketStartUDP(uint8_t s, uint8_t* addr, uint16_t port)
 {
-  if (
-     ((addr[0] == 0x00) && (addr[1] == 0x00) && (addr[2] == 0x00) && (addr[3] == 0x00)) ||
-     ((port == 0x00))
-    ) 
-  {
-    return 0;
-  } else {
-    SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-    W5100.writeSnDIPR(s, addr);
-    W5100.writeSnDPORT(s, port);
-    SPI.endTransaction();
-    return 1;
-  }
+	if ( ((addr[0] == 0x00) && (addr[1] == 0x00) && (addr[2] == 0x00) && (addr[3] == 0x00)) ||
+	  ((port == 0x00)) ) {
+		return 0;
+	}
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	W5100.writeSnDIPR(s, addr);
+	W5100.writeSnDPORT(s, port);
+	SPI.endTransaction();
+	return 1;
 }
 
 int socketSendUDP(uint8_t s)
 {
-  SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-  W5100.execCmdSn(s, Sock_SEND);
-		
-  /* +2008.01 bj */
-  while ( (W5100.readSnIR(s) & SnIR::SEND_OK) != SnIR::SEND_OK ) {
-    if (W5100.readSnIR(s) & SnIR::TIMEOUT) {
-      /* +2008.01 [bj]: clear interrupt */
-      W5100.writeSnIR(s, (SnIR::SEND_OK|SnIR::TIMEOUT));
-      SPI.endTransaction();
-	//Serial.printf("sendUDP timeout\n");
-      return 0;
-    }
-    SPI.endTransaction();
-    yield();
-    SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-  }
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	W5100.execCmdSn(s, Sock_SEND);
 
-  /* +2008.01 bj */	
-  W5100.writeSnIR(s, SnIR::SEND_OK);
-  SPI.endTransaction();
+	/* +2008.01 bj */
+	while ( (W5100.readSnIR(s) & SnIR::SEND_OK) != SnIR::SEND_OK ) {
+		if (W5100.readSnIR(s) & SnIR::TIMEOUT) {
+			/* +2008.01 [bj]: clear interrupt */
+			W5100.writeSnIR(s, (SnIR::SEND_OK|SnIR::TIMEOUT));
+			SPI.endTransaction();
+			//Serial.printf("sendUDP timeout\n");
+			return 0;
+		}
+		SPI.endTransaction();
+		yield();
+		SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	}
+
+	/* +2008.01 bj */
+	W5100.writeSnIR(s, SnIR::SEND_OK);
+	SPI.endTransaction();
 
 	//Serial.printf("sendUDP ok\n");
-  /* Sent ok */
-  return 1;
+	/* Sent ok */
+	return 1;
 }
 

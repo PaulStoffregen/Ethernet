@@ -19,7 +19,7 @@ uint8_t  socketListen(uint8_t s);
 // Send data (TCP)
 uint16_t socketSend(uint8_t s, const uint8_t * buf, uint16_t len);
 // Receive data (TCP)
-int16_t  socketRecv(uint8_t s, uint8_t * buf, int16_t len);
+int      socketRecv(uint8_t s, uint8_t * buf, int16_t len);
 uint16_t socketRecvAvailable(uint8_t s);
 //void     socketRead_data(uint8_t s, uint16_t src, volatile uint8_t *dst, uint16_t len);
 //void     socketUpdateRecvOffset(uint8_t s, uint16_t offset);
