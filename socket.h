@@ -21,7 +21,7 @@ uint16_t socketSend(uint8_t s, const uint8_t * buf, uint16_t len);
 // Receive data (TCP)
 int      socketRecv(uint8_t s, uint8_t * buf, int16_t len);
 uint16_t socketRecvAvailable(uint8_t s);
-uint16_t socketPeek(uint8_t s, uint8_t *buf);
+uint8_t  socketPeek(uint8_t s);
 
 /*
   @brief This function sets up a UDP datagram, the data for which will be provided by one

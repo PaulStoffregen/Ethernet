@@ -11,22 +11,21 @@ extern void yield(void);
 #define yield()
 #endif
 
-static uint16_t local_port;
+static uint16_t local_port = 27003;
 
 typedef struct {
 	uint16_t RX_RSR; // Number of bytes received
-	uint16_t RX_RD;  // Address to read
+	//uint16_t RX_RD;  // Address to read
 	uint16_t TX_FSR; // Free space ready for transmit
 } socketstate_t;
 
 static socketstate_t state[MAX_SOCK_NUM];
 
 
-static uint16_t getTXFreeSize(uint8_t s);
-static uint16_t getRXReceivedSize(uint8_t s);
+static uint16_t getSnTX_FSR(uint8_t s);
+static uint16_t getSnRX_RSR(uint8_t s);
 static void send_data_processing(uint8_t s, uint16_t offset, const uint8_t *data, uint16_t len);
 static void read_data(uint8_t s, uint16_t src, volatile uint8_t *dst, uint16_t len);
-static void recv_data_processing(uint8_t s, uint8_t *data, uint16_t len, uint8_t peek);
 
 
 
@@ -37,30 +36,23 @@ static void recv_data_processing(uint8_t s, uint8_t *data, uint16_t len, uint8_t
 
 uint8_t socketBegin(uint8_t protocol, uint16_t port)
 {
+	uint8_t s, status[MAX_SOCK_NUM];
+
 	//Serial.printf("W5000socket begin, protocol=%d, port=%d\n", protocol, port);
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	uint8_t s, status[MAX_SOCK_NUM];
-#if 0
-	if (s < MAX_SOCK_NUM) {
-		//Serial.printf("W5000socket step1\n");
-		// we already have a hardware socket
-		uint8_t stat;
-		stat = W5100.readSnSR(s);
-		if (stat == SnSR::CLOSED) {
-			// closed, so just use it
-			goto makesocket;
-		} else if (stat == SnSR::ESTABLISHED || stat == SnSR::INIT
-		  || stat == SnSR::CLOSE_WAIT) {
-			// connected (TCP), try disconnect
-  			W5100.execCmdSn(s, Sock_DISCON);
-		}
-		status[s] = stat;
-	}
-#endif
-	// look at all the hardware sockets, use any closed
+	// look at all the hardware sockets, use any that are closed (unused)
 	for (s=0; s < MAX_SOCK_NUM; s++) {
 		status[s] = W5100.readSnSR(s);
 		if (status[s] == SnSR::CLOSED) goto makesocket;
+	}
+	//Serial.printf("W5000socket step2\n");
+	// as a last resort, forcibly close any already closing
+	for (s=0; s < MAX_SOCK_NUM; s++) {
+		uint8_t stat = status[s];
+		if (stat == SnSR::LAST_ACK) goto closemakesocket;
+		if (stat == SnSR::TIME_WAIT) goto closemakesocket;
+		if (stat == SnSR::FIN_WAIT) goto closemakesocket;
+		if (stat == SnSR::CLOSING) goto closemakesocket;
 	}
 #if 0
 	Serial.printf("W5000socket step3\n");
@@ -71,15 +63,6 @@ uint8_t socketBegin(uint8_t protocol, uint16_t port)
 		if (stat == SnSR::CLOSE_WAIT) goto closemakesocket;
 	}
 #endif
-	//Serial.printf("W5000socket step4\n");
-	// as a last resort, forcibly close any already closing
-	for (s=0; s < MAX_SOCK_NUM; s++) {
-		uint8_t stat = status[s];
-		if (stat == SnSR::LAST_ACK) goto closemakesocket;
-		if (stat == SnSR::TIME_WAIT) goto closemakesocket;
-		if (stat == SnSR::FIN_WAIT) goto closemakesocket;
-		if (stat == SnSR::CLOSING) goto closemakesocket;
-	}
 	SPI.endTransaction();
 	return MAX_SOCK_NUM; // all sockets are in use
 closemakesocket:
@@ -88,7 +71,7 @@ closemakesocket:
 makesocket:
 	//Serial.printf("W5000socket %d\n", s);
 	EthernetServer::server_port[s] = 0;
-	delayMicroseconds(25); // TODO: is this needed??
+	delayMicroseconds(250); // TODO: is this needed??
 	W5100.writeSnMR(s, protocol);
 	W5100.writeSnIR(s, 0xFF);
 	if (port > 0) {
@@ -98,7 +81,8 @@ makesocket:
 		W5100.writeSnPORT(s, ++local_port);
 	}
 	W5100.execCmdSn(s, Sock_OPEN);
-	//state[s] = W5100.
+	state[s].RX_RSR = 0;
+	state[s].TX_FSR = 0;
 	//Serial.printf("W5000socket prot=%d\n", W5100.readSnMR(s));
 	SPI.endTransaction();
 	return s;
@@ -170,19 +154,20 @@ void socketDisconnect(uint8_t s)
 /*****************************************/
 
 
-static uint16_t getRXReceivedSize(uint8_t s)
+static uint16_t getSnRX_RSR(uint8_t s)
 {
         uint16_t val, prev;
 
         prev = W5100.readSnRX_RSR(s);
         while (1) {
                 val = W5100.readSnRX_RSR(s);
-                if (val == prev) return val;
+                if (val == prev) {
+			state[s].RX_RSR = val;
+			return val;
+		}
                 prev = val;
         }
 }
-
-
 
 static void read_data(uint8_t s, uint16_t src, volatile uint8_t *dst, uint16_t len)
 {
@@ -190,6 +175,7 @@ static void read_data(uint8_t s, uint16_t src, volatile uint8_t *dst, uint16_t l
 	uint16_t src_mask;
 	uint16_t src_ptr;
 
+	//Serial.printf("read_data, len=%d, at:%d\n", len, src);
 	src_mask = (uint16_t)src & W5100.SMASK;
 	src_ptr = W5100.RBASE[s] + src_mask;
 
@@ -203,25 +189,16 @@ static void read_data(uint8_t s, uint16_t src, volatile uint8_t *dst, uint16_t l
 	}
 }
 
-static void recv_data_processing(uint8_t s, uint8_t *data, uint16_t len, uint8_t peek)
-{
-	uint16_t ptr;
-	ptr = W5100.readSnRX_RD(s);
-	read_data(s, ptr, data, len);
-	if (!peek) {
-		ptr += len;
-		W5100.writeSnRX_RD(s, ptr);
-	}
-}
-
-
 // Receive data.  Returns size, or -1 for no data, or 0 if connection closed
 //
 int socketRecv(uint8_t s, uint8_t *buf, int16_t len)
 {
 	// Check how much data is available
+	int ret = state[s].RX_RSR;
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	int16_t ret = getRXReceivedSize(s);
+	if (ret < len) {
+		ret = getSnRX_RSR(s);
+	}
 	if (ret == 0) {
 		// No data available.
 		uint8_t status = W5100.readSnSR(s);
@@ -234,13 +211,14 @@ int socketRecv(uint8_t s, uint8_t *buf, int16_t len)
 			// The connection is still up, but there's no data waiting to be read
 			ret = -1;
 		}
-	} else if (ret > len) {
-		ret = len;
-	}
-
-	if (ret > 0) {
-		recv_data_processing(s, buf, ret, 0);
+	} else {
+		if (ret > len) ret = len; // more data available than buffer length
+		uint16_t ptr = W5100.readSnRX_RD(s);
+		read_data(s, ptr, buf, ret);
+		ptr += len;
+		W5100.writeSnRX_RD(s, ptr);
 		W5100.execCmdSn(s, Sock_RECV);
+		state[s].RX_RSR -= ret;
 	}
 	SPI.endTransaction();
 	return ret;
@@ -248,22 +226,26 @@ int socketRecv(uint8_t s, uint8_t *buf, int16_t len)
 
 uint16_t socketRecvAvailable(uint8_t s)
 {
-	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	uint16_t ret = getRXReceivedSize(s);
-	//uint8_t ir = W5100.readSnIR(s);
-	SPI.endTransaction();
-	//Serial.printf("sock.recvAvailable s=%d, ir=%02X, num=%d\n", s, ir, ret);
+	uint16_t ret = state[s].RX_RSR;
+	if (ret == 0) {
+		SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+		ret = getSnRX_RSR(s);
+		SPI.endTransaction();
+	}
+	//Serial.printf("sock.recvAvailable s=%d, num=%d\n", s, ret);
 	return ret;
 }
 
 // get the first byte in the receive queue (no checking)
 //
-uint16_t socketPeek(uint8_t s, uint8_t *buf)
+uint8_t socketPeek(uint8_t s)
 {
+	uint8_t b;
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	recv_data_processing(s, buf, 1, 1);
+	uint16_t ptr = W5100.readSnRX_RD(s);
+	read_data(s, ptr, &b, 1);
 	SPI.endTransaction();
-	return 1;
+	return b;
 }
 
 
@@ -272,14 +254,17 @@ uint16_t socketPeek(uint8_t s, uint8_t *buf)
 /*    Socket Data Transmit Functions     */
 /*****************************************/
 
-static uint16_t getTXFreeSize(uint8_t s)
+static uint16_t getSnTX_FSR(uint8_t s)
 {
         uint16_t val, prev;
 
         prev = W5100.readSnTX_FSR(s);
         while (1) {
                 val = W5100.readSnTX_FSR(s);
-                if (val == prev) return val;
+                if (val == prev) {
+			state[s].TX_FSR = val;
+			return val;
+		}
                 prev = val;
         }
 }
@@ -324,7 +309,7 @@ uint16_t socketSend(uint8_t s, const uint8_t * buf, uint16_t len)
 	// if freebuf is available, start.
 	do {
 		SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-		freesize = getTXFreeSize(s);
+		freesize = getSnTX_FSR(s);
 		status = W5100.readSnSR(s);
 		SPI.endTransaction();
 		if ((status != SnSR::ESTABLISHED) && (status != SnSR::CLOSE_WAIT)) {
@@ -362,7 +347,7 @@ uint16_t socketBufferData(uint8_t s, uint16_t offset, const uint8_t* buf, uint16
 	//Serial.printf("  bufferData, offset=%d, len=%d\n", offset, len);
 	uint16_t ret =0;
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	uint16_t txfree = getTXFreeSize(s);
+	uint16_t txfree = getSnTX_FSR(s);
 	if (len > txfree) {
 		ret = txfree; // check size not to exceed MAX size.
 	} else {

@@ -12,6 +12,7 @@ extern "C" {
 #include "EthernetServer.h"
 #include "Dns.h"
 
+// TODO: randomize this....
 uint16_t EthernetClient::srcport = 49152;      //Use IANA recommended ephemeral port range 49152-65535
 
 int EthernetClient::connect(const char * host, uint16_t port)
@@ -19,6 +20,10 @@ int EthernetClient::connect(const char * host, uint16_t port)
 	DNSClient dns; // Look up the host first
 	IPAddress remote_addr;
 
+	if (sockindex < MAX_SOCK_NUM) {
+		if (socketStatus(sockindex) != SnSR::CLOSED) socketDisconnect(sockindex);
+		sockindex = MAX_SOCK_NUM;
+	}
 	dns.begin(Ethernet.dnsServerIP());
 	if (!dns.getHostByName(host, remote_addr)) return 0;
 	return connect(remote_addr, port);
@@ -26,6 +31,10 @@ int EthernetClient::connect(const char * host, uint16_t port)
 
 int EthernetClient::connect(IPAddress ip, uint16_t port)
 {
+	if (sockindex < MAX_SOCK_NUM) {
+		if (socketStatus(sockindex) != SnSR::CLOSED) socketDisconnect(sockindex);
+		sockindex = MAX_SOCK_NUM;
+	}
 	if (ip == IPAddress(0ul) || ip == IPAddress(0xFFFFFFFFul)) return 0;
 	if (++srcport == 0) srcport = 49152; // IANA recommended ephemeral range 49152-65535
 	sockindex = socketBegin(SnMR::TCP, srcport);
@@ -68,9 +77,7 @@ int EthernetClient::peek()
 {
 	if (sockindex >= MAX_SOCK_NUM) return -1;
 	if (!available()) return -1;
-	uint8_t b;
-	socketPeek(sockindex, &b);
-	return b;
+	return socketPeek(sockindex);
 }
 
 int EthernetClient::read()
