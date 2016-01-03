@@ -12,8 +12,6 @@ extern "C" {
 #include "EthernetServer.h"
 #include "Dns.h"
 
-// TODO: randomize this....
-uint16_t EthernetClient::srcport = 49152;      //Use IANA recommended ephemeral port range 49152-65535
 
 int EthernetClient::connect(const char * host, uint16_t port)
 {
@@ -36,8 +34,7 @@ int EthernetClient::connect(IPAddress ip, uint16_t port)
 		sockindex = MAX_SOCK_NUM;
 	}
 	if (ip == IPAddress(0ul) || ip == IPAddress(0xFFFFFFFFul)) return 0;
-	if (++srcport == 0) srcport = 49152; // IANA recommended ephemeral range 49152-65535
-	sockindex = socketBegin(SnMR::TCP, srcport);
+	sockindex = socketBegin(SnMR::TCP, 0);
 	if (sockindex >= MAX_SOCK_NUM) return 0;
 	socketConnect(sockindex, rawIPAddress(ip), port);
 	while (1) {

@@ -11,11 +11,12 @@ extern void yield(void);
 #define yield()
 #endif
 
-static uint16_t local_port = 27003;
+// TODO: randomize this when not using DHCP, but how?
+static uint16_t local_port = 49152;  // 49152 to 65535
 
 typedef struct {
 	uint16_t RX_RSR; // Number of bytes received
-	//uint16_t RX_RD;  // Address to read
+	uint16_t RX_RD;  // Address to read
 	uint16_t TX_FSR; // Free space ready for transmit
 } socketstate_t;
 
@@ -33,6 +34,13 @@ static void read_data(uint8_t s, uint16_t src, volatile uint8_t *dst, uint16_t l
 /*          Socket management            */
 /*****************************************/
 
+
+void socketPortRand(uint16_t n)
+{
+	n &= 0x3FFF;
+	local_port ^= n;
+	//Serial.printf("socketPortRand %d, srcport=%d\n", n, local_port);
+}
 
 uint8_t socketBegin(uint8_t protocol, uint16_t port)
 {
@@ -78,12 +86,14 @@ makesocket:
 		W5100.writeSnPORT(s, port);
 	} else {
 		// if don't set the source port, set local_port number.
-		W5100.writeSnPORT(s, ++local_port);
+		if (++local_port < 49152) local_port = 49152;
+		W5100.writeSnPORT(s, local_port);
 	}
 	W5100.execCmdSn(s, Sock_OPEN);
 	state[s].RX_RSR = 0;
+	state[s].RX_RD  = W5100.readSnRX_RD(s);
 	state[s].TX_FSR = 0;
-	//Serial.printf("W5000socket prot=%d\n", W5100.readSnMR(s));
+	//Serial.printf("W5000socket prot=%d, RX_RD=%d\n", W5100.readSnMR(s), state[s].RX_RD);
 	SPI.endTransaction();
 	return s;
 }

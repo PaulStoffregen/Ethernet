@@ -3,10 +3,10 @@
 
 #include "w5100.h"
 
-// Opens a socket(TCP or UDP or IP_RAW mode)
-//uint8_t socket(SOCKET s, uint8_t protocol, uint16_t port, uint8_t flag);
-uint8_t  socketBegin(uint8_t protocol, uint16_t port);
+void socketPortRand(uint16_t n);
 
+// Opens a socket(TCP or UDP or IP_RAW mode)
+uint8_t  socketBegin(uint8_t protocol, uint16_t port);
 uint8_t  socketStatus(uint8_t s);
 // Close socket
 void     socketClose(uint8_t s);

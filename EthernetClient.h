@@ -37,7 +37,6 @@ public:
 
 private:
 	uint8_t sockindex;
-	static uint16_t srcport;
 };
 
 #endif
