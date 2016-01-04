@@ -18,6 +18,7 @@ typedef struct {
 	uint16_t RX_RSR; // Number of bytes received
 	uint16_t RX_RD;  // Address to read
 	uint16_t TX_FSR; // Free space ready for transmit
+	uint8_t  RX_inc; // how much have we advanced RX_RD
 } socketstate_t;
 
 static socketstate_t state[MAX_SOCK_NUM];
@@ -91,7 +92,8 @@ makesocket:
 	}
 	W5100.execCmdSn(s, Sock_OPEN);
 	state[s].RX_RSR = 0;
-	state[s].RX_RD  = W5100.readSnRX_RD(s);
+	state[s].RX_RD  = W5100.readSnRX_RD(s); // always zero?
+	state[s].RX_inc = 0;
 	state[s].TX_FSR = 0;
 	//Serial.printf("W5000socket prot=%d, RX_RD=%d\n", W5100.readSnMR(s), state[s].RX_RD);
 	SPI.endTransaction();
@@ -166,6 +168,7 @@ void socketDisconnect(uint8_t s)
 
 static uint16_t getSnRX_RSR(uint8_t s)
 {
+#if 1
         uint16_t val, prev;
 
         prev = W5100.readSnRX_RSR(s);
@@ -177,6 +180,11 @@ static uint16_t getSnRX_RSR(uint8_t s)
 		}
                 prev = val;
         }
+#else
+	uint16_t val = W5100.readSnRX_RSR(s);
+	state[s].RX_RSR = val;
+	return val;
+#endif
 }
 
 static void read_data(uint8_t s, uint16_t src, volatile uint8_t *dst, uint16_t len)
@@ -223,12 +231,20 @@ int socketRecv(uint8_t s, uint8_t *buf, int16_t len)
 		}
 	} else {
 		if (ret > len) ret = len; // more data available than buffer length
-		uint16_t ptr = W5100.readSnRX_RD(s);
+		uint16_t ptr = state[s].RX_RD;
 		read_data(s, ptr, buf, ret);
 		ptr += len;
-		W5100.writeSnRX_RD(s, ptr);
-		W5100.execCmdSn(s, Sock_RECV);
+		state[s].RX_RD = ptr;
 		state[s].RX_RSR -= ret;
+		uint16_t inc = state[s].RX_inc + ret;
+		if (inc >= 80 || state[s].RX_RSR == 0) {
+			state[s].RX_inc = 0;
+			W5100.writeSnRX_RD(s, ptr);
+			W5100.execCmdSn(s, Sock_RECV);
+			//Serial.printf("Sock_RECV cmd, RX_RD=%d\n", state[s].RX_RD);
+		} else {
+			state[s].RX_inc = inc;
+		}
 	}
 	SPI.endTransaction();
 	return ret;
@@ -252,8 +268,8 @@ uint8_t socketPeek(uint8_t s)
 {
 	uint8_t b;
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	uint16_t ptr = W5100.readSnRX_RD(s);
-	read_data(s, ptr, &b, 1);
+	uint16_t ptr = state[s].RX_RD;
+	W5100.read((ptr & W5100.SMASK) + W5100.RBASE[s], &b, 1);
 	SPI.endTransaction();
 	return b;
 }
