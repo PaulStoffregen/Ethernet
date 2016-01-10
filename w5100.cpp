@@ -284,14 +284,14 @@ uint16_t W5100Class::read(uint16_t addr, uint8_t *buf, uint16_t len)
 		*buf = SPIFIFO.read();
 		//Serial.println(*buf, HEX);
 	} else {
-		// read 4 or more, odd length
+		// read 4 or more, even length
   		//Serial.print("W5200 read, len=");
 		//Serial.println(len);
 		uint32_t count = len / 2 - 1;
 		SPIFIFO.write16(0, SPI_CONTINUE);
 		SPIFIFO.read();
 		do {
-			SPIFIFO.write16(0, (count > 0) ? SPI_CONTINUE : 0);
+			SPIFIFO.write16(0, (count > 1) ? SPI_CONTINUE : 0);
 			uint32_t val = SPIFIFO.read();
 			*buf++ = val >> 8;
 			*buf++ = val;
