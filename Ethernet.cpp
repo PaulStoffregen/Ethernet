@@ -3,7 +3,7 @@
 #include "Dhcp.h"
 
 IPAddress EthernetClass::_dnsServerAddress;
-DhcpClass* EthernetClass::_dhcp = NULL;
+DhcpClass* EthernetClass::_dhcp = nullptr;
 
 int EthernetClass::begin(uint8_t *mac, unsigned long timeout, unsigned long responseTimeout)
 {
@@ -78,7 +78,7 @@ void EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress g
 int EthernetClass::maintain()
 {
 	int result = DHCP_CHECK_NONE;
-	if (_dhcp != NULL) {
+	if (_dhcp != nullptr) {
 		// we have a pointer to dhcp, use it
 		result = _dhcp->checkLease();
 		switch (result) {
