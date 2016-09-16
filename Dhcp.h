@@ -167,10 +167,10 @@ private:
   int request_DHCP_lease();
   void reset_DHCP_lease();
   void presend_DHCP();
-  void send_DHCP_MESSAGE(uint8_t, uint16_t);
+  void send_DHCP_MESSAGE(const uint8_t, const uint16_t);
   void printByte(char *, uint8_t);
   
-  uint8_t parseDHCPResponse(unsigned long responseTimeout, uint32_t& transactionId);
+  uint8_t parseDHCPResponse(const unsigned long responseTimeout, uint32_t& transactionId);
 public:
   IPAddress getLocalIp();
   IPAddress getSubnetMask();
@@ -178,7 +178,7 @@ public:
   IPAddress getDhcpServerIp();
   IPAddress getDnsServerIp();
   
-  int beginWithDHCP(uint8_t *, unsigned long timeout = 60000, unsigned long responseTimeout = 4000);
+  int beginWithDHCP(uint8_t *, const unsigned long timeout = 60000, const unsigned long responseTimeout = 4000);
   int checkLease();
 };
 

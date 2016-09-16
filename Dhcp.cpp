@@ -9,7 +9,7 @@
 #include "Arduino.h"
 #include "util.h"
 
-int DhcpClass::beginWithDHCP(uint8_t *mac, unsigned long timeout, unsigned long responseTimeout)
+int DhcpClass::beginWithDHCP(uint8_t *mac, const unsigned long timeout, const unsigned long responseTimeout)
 {
     _dhcpLeaseTime=0;
     _dhcpT1=0;
@@ -132,7 +132,7 @@ void DhcpClass::presend_DHCP()
 {
 }
 
-void DhcpClass::send_DHCP_MESSAGE(uint8_t messageType, uint16_t secondsElapsed)
+void DhcpClass::send_DHCP_MESSAGE(const uint8_t messageType, const uint16_t secondsElapsed)
 {
     uint8_t buffer[32];
     memset(buffer, 0, 32);
@@ -251,7 +251,7 @@ void DhcpClass::send_DHCP_MESSAGE(uint8_t messageType, uint16_t secondsElapsed)
     _dhcpUdpSocket.endPacket();
 }
 
-uint8_t DhcpClass::parseDHCPResponse(unsigned long responseTimeout, uint32_t& transactionId)
+uint8_t DhcpClass::parseDHCPResponse(const unsigned long responseTimeout, uint32_t& transactionId)
 {
     uint8_t type = 0;
     uint8_t opt_len = 0;
