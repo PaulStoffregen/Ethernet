@@ -9,6 +9,14 @@
 #include "Arduino.h"
 #include "util.h"
 
+DhcpClass::~DhcpClass() {
+	delete[] _dhcpLocalIp;
+	delete[] _dhcpSubnetMask;
+	delete[] _dhcpGatewayIp;
+	delete[] _dhcpDhcpServerIp;
+	delete[] _dhcpDnsServerIp;
+}
+
 int DhcpClass::beginWithDHCP(uint8_t *mac, const unsigned long timeout, const unsigned long responseTimeout)
 {
     _dhcpLeaseTime=0;

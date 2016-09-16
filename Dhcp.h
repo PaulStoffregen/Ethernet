@@ -180,6 +180,7 @@ public:
   
   int beginWithDHCP(uint8_t *, const unsigned long timeout = 60000, const unsigned long responseTimeout = 4000);
   int checkLease();
+  ~DhcpClass();
 };
 
 #endif
