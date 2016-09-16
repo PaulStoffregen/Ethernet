@@ -18,8 +18,8 @@ int EthernetClass::begin(uint8_t *mac, unsigned long timeout, unsigned long resp
 	SPI.endTransaction();
 
 	// Now try to get our config info from a DHCP server
-	int ret = _dhcp->beginWithDHCP(mac, timeout, responseTimeout);
-	if (ret == 1) {
+	int result = _dhcp->beginWithDHCP(mac, timeout, responseTimeout);
+	if (result == 1) {
 		// We've successfully found a DHCP server and got our configuration
 		// info, so set things accordingly
 		SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
@@ -30,7 +30,7 @@ int EthernetClass::begin(uint8_t *mac, unsigned long timeout, unsigned long resp
 		_dnsServerAddress = _dhcp->getDnsServerIp();
 		socketPortRand(micros());
 	}
-	return ret;
+	return result;
 }
 
 void EthernetClass::begin(uint8_t *mac, IPAddress ip)
@@ -77,11 +77,11 @@ void EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress g
 
 int EthernetClass::maintain()
 {
-	int rc = DHCP_CHECK_NONE;
+	int result = DHCP_CHECK_NONE;
 	if (_dhcp != NULL) {
 		// we have a pointer to dhcp, use it
-		rc = _dhcp->checkLease();
-		switch (rc) {
+		result = _dhcp->checkLease();
+		switch (result) {
 		case DHCP_CHECK_NONE:
 			//nothing done
 			break;
@@ -100,34 +100,34 @@ int EthernetClass::maintain()
 			break;
 		}
 	}
-	return rc;
+	return result;
 }
 
 IPAddress EthernetClass::localIP()
 {
-	IPAddress ret;
+	IPAddress address;
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	W5100.getIPAddress(ret.raw_address());
+	W5100.getIPAddress(address.raw_address());
 	SPI.endTransaction();
-	return ret;
+	return address;
 }
 
 IPAddress EthernetClass::subnetMask()
 {
-	IPAddress ret;
+	IPAddress address;
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	W5100.getSubnetMask(ret.raw_address());
+	W5100.getSubnetMask(address.raw_address());
 	SPI.endTransaction();
-	return ret;
+	return address;
 }
 
 IPAddress EthernetClass::gatewayIP()
 {
-	IPAddress ret;
+	IPAddress result;
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	W5100.getGatewayIp(ret.raw_address());
+	W5100.getGatewayIp(result.raw_address());
 	SPI.endTransaction();
-	return ret;
+	return result;
 }
 
 
