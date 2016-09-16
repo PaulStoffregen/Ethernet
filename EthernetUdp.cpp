@@ -171,7 +171,7 @@ int EthernetUDP::peek()
 	// Unlike recv, peek doesn't check to see if there's any data available, so we must.
 	// If the user hasn't called parsePacket yet then return nothing otherwise they
 	// may get the UDP header
-	if (sockindex >= MAX_SOCK_NUM || _remaining == 0) return -1;
+	if (sockindex >= MAX_SOCK_NUM || _remaining == 0) return ERROR;
 	return socketPeek(sockindex);
 }
 
@@ -181,7 +181,7 @@ void EthernetUDP::flush()
 }
 
 /* Start EthernetUDP socket, listening at local port PORT */
-uint8_t EthernetUDP::beginMulticast(IPAddress ip, const uint16_t port)
+uint8_t EthernetUDP::beginMulticast(IPAddress ip, uint16_t port)
 {
 	if (sockindex < MAX_SOCK_NUM) socketClose(sockindex);
 	sockindex = socketBegin(SnMR::UDP | SnMR::MULTI, port);
