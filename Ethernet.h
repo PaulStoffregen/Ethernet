@@ -17,14 +17,14 @@ public:
 	// Initialise the Ethernet shield to use the provided MAC address and
 	// gain the rest of the configuration through DHCP.
 	// Returns 0 if the DHCP configuration failed, and 1 if it succeeded
-	static int begin(uint8_t *mac, unsigned long timeout = 60000, unsigned long responseTimeout = 4000);
+	static int begin(uint8_t *mac, const unsigned long timeout = 60000, const unsigned long responseTimeout = 4000);
 	static int maintain();
 
 	// Manaul configuration
-	static void begin(uint8_t *mac, IPAddress ip);
-	static void begin(uint8_t *mac, IPAddress ip, IPAddress dns);
-	static void begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress gateway);
-	static void begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress gateway, IPAddress subnet);
+	static void begin(uint8_t *mac, const IPAddress, const ip);
+	static void begin(uint8_t *mac, const IPAddress ip, const IPAddress dns);
+	static void begin(uint8_t *mac, const IPAddress ip, const IPAddress dns, IPAddress gateway);
+	static void begin(uint8_t *mac, const IPAddress ip, const IPAddress dns, const IPAddress gateway, const IPAddress subnet);
 
 	static IPAddress localIP();
 	static IPAddress subnetMask();

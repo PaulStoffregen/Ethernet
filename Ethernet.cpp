@@ -5,7 +5,7 @@
 IPAddress EthernetClass::_dnsServerAddress;
 DhcpClass* EthernetClass::_dhcp = nullptr;
 
-int EthernetClass::begin(uint8_t *mac, unsigned long timeout, unsigned long responseTimeout)
+int EthernetClass::begin(uint8_t *mac, const unsigned long timeout, const unsigned long responseTimeout)
 {
 	static DhcpClass s_dhcp;
 	_dhcp = &s_dhcp;
@@ -33,7 +33,7 @@ int EthernetClass::begin(uint8_t *mac, unsigned long timeout, unsigned long resp
 	return result;
 }
 
-void EthernetClass::begin(uint8_t *mac, IPAddress ip)
+void EthernetClass::begin(uint8_t *mac, const IPAddress ip)
 {
 	// Assume the DNS server will be the machine on the same network as the local IP
 	// but with last octet being '1'
@@ -42,7 +42,7 @@ void EthernetClass::begin(uint8_t *mac, IPAddress ip)
 	begin(mac, ip, dns);
 }
 
-void EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns)
+void EthernetClass::begin(uint8_t *mac, const IPAddress ip, const IPAddress dns)
 {
 	// Assume the gateway will be the machine on the same network as the local IP
 	// but with last octet being '1'
@@ -51,13 +51,13 @@ void EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns)
 	begin(mac, ip, dns, gateway);
 }
 
-void EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress gateway)
+void EthernetClass::begin(uint8_t *mac, const IPAddress ip, const IPAddress dns, const IPAddress gateway)
 {
 	IPAddress subnet(255, 255, 255, 0);
 	begin(mac, ip, dns, gateway, subnet);
 }
 
-void EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress gateway, IPAddress subnet)
+void EthernetClass::begin(uint8_t *mac, const IPAddress ip, const IPAddress dns, const IPAddress gateway, const IPAddress subnet)
 {
 	W5100.init();
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
