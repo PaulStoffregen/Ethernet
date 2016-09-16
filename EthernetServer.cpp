@@ -38,7 +38,7 @@ void EthernetServer::accept()
 EthernetClient EthernetServer::available()
 {
 	accept();
-	for (uint8_t i=0; i < MAX_SOCK_NUM; ++i) {
+	for (uint8_t i = 0; i < MAX_SOCK_NUM; ++i) {
 		if (server_port[i] == _port) {
 			uint8_t stat = socketStatus(i);
 			if (stat == SnSR::ESTABLISHED || stat == SnSR::CLOSE_WAIT) {

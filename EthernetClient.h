@@ -9,8 +9,8 @@
 class EthernetClient : public Client {
 
 public:
-  EthernetClient() : sockindex(MAX_SOCK_NUM) { };
-  EthernetClient(uint8_t s) : sockindex(s) { };
+  EthernetClient() : sockindex(MAX_SOCK_NUM) { }
+  EthernetClient(uint8_t s) : sockindex(s) { }
 
   uint8_t status();
   virtual int connect(IPAddress ip, uint16_t port);
@@ -28,7 +28,7 @@ public:
   virtual bool operator==(const bool value) { return bool() == value; }
   virtual bool operator!=(const bool value) { return bool() != value; }
   virtual bool operator==(const EthernetClient&);
-  virtual bool operator!=(const EthernetClient& rhs) { return !this->operator==(rhs); };
+  virtual bool operator!=(const EthernetClient& rhs) { return !this->operator==(rhs); }
   uint8_t getSocketNumber() const { return sockindex; }
 
   friend class EthernetServer;
