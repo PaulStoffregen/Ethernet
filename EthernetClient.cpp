@@ -126,9 +126,9 @@ uint8_t EthernetClient::status()
 // EthernetServer::available() as the condition in an if-statement.
 
 bool EthernetClient::operator==(const EthernetClient& rhs) {
-	if (sockindex != rhs.sockindex) return false;
-	if (sockindex >= MAX_SOCK_NUM) return false;
-	if (rhs.sockindex >= MAX_SOCK_NUM) return false;
+	if ((sockindex != rhs.sockindex) || (sockindex >= MAX_SOCK_NUM) || (rhs.sockindex >= MAX_SOCK_NUM)) {
+		return false;
+	}
 	return true;
 }
 
