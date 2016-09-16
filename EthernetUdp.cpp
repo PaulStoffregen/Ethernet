@@ -141,7 +141,7 @@ int EthernetUDP::read()
 	}
 
 	// If we get here, there's no data available
-	return -1;
+	return ERROR;
 }
 
 int EthernetUDP::read(unsigned char* buffer, size_t len)
@@ -163,7 +163,7 @@ int EthernetUDP::read(unsigned char* buffer, size_t len)
 		}
 	}
 	// If we get here, there's no data available or recv failed
-	return -1;
+	return ERROR;
 }
 
 int EthernetUDP::peek()
@@ -181,7 +181,7 @@ void EthernetUDP::flush()
 }
 
 /* Start EthernetUDP socket, listening at local port PORT */
-uint8_t EthernetUDP::beginMulticast(IPAddress ip, uint16_t port)
+uint8_t EthernetUDP::beginMulticast(IPAddress ip, const uint16_t port)
 {
 	if (sockindex < MAX_SOCK_NUM) socketClose(sockindex);
 	sockindex = socketBegin(SnMR::UDP | SnMR::MULTI, port);
