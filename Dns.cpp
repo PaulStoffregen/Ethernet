@@ -11,43 +11,6 @@
 //#include <stdlib.h>
 #include "Arduino.h"
 
-
-constexpr uint8_t SOCKET_NONE = 255;
-// Various flags and header field values for a DNS message
-constexpr uint8_t UDP_HEADER_SIZE          = 8;
-constexpr uint8_t DNS_HEADER_SIZE          = 12;
-constexpr uint8_t TTL_SIZE                 = 4;
-constexpr uint8_t QUERY_FLAG               = (0);
-constexpr uint8_t RESPONSE_FLAG            = (1<<15);
-constexpr uint8_t QUERY_RESPONSE_MASK      = (1<<15);
-constexpr uint8_t OPCODE_STANDARD_QUERY    = (0);
-constexpr uint8_t OPCODE_INVERSE_QUERY     = (1<<11);
-constexpr uint8_t OPCODE_STATUS_REQUEST    = (2<<11);
-constexpr uint8_t OPCODE_MASK              = (15<<11);
-constexpr uint8_t AUTHORITATIVE_FLAG       = (1<<10);
-constexpr uint8_t TRUNCATION_FLAG          = (1<<9);
-constexpr uint8_t RECURSION_DESIRED_FLAG   = (1<<8);
-constexpr uint8_t RECURSION_AVAILABLE_FLAG = (1<<7);
-constexpr uint8_t RESP_NO_ERROR            = (0);
-constexpr uint8_t RESP_FORMAT_ERROR        = (1);
-constexpr uint8_t RESP_SERVER_FAILURE      = (2);
-constexpr uint8_t RESP_NAME_ERROR          = (3);
-constexpr uint8_t RESP_NOT_IMPLEMENTED     = (4);
-constexpr uint8_t RESP_REFUSED             = (5);
-constexpr uint8_t RESP_MASK                = (15);
-constexpr uint8_t TYPE_A                   = (0x0001);
-constexpr uint8_t CLASS_IN                 = (0x0001);
-constexpr uint8_t LABEL_COMPRESSION_MASK   = (0xC0);
-// Port number that DNS servers listen on
-constexpr uint8_t DNS_PORT                  = 53;
-
-// Possible return codes from ProcessResponse
-constexpr uint8_t SUCCESS                   = 1;
-constexpr uint8_t TIMED_OUT                 = -1;
-constexpr uint8_t INVALID_SERVER            = -2;
-constexpr uint8_t TRUNCATED                 = -3;
-constexpr uint8_t INVALID_RESPONSE          = -4;
-
 void DNSClient::begin(const IPAddress& aDNSServer)
 {
     iDNSServer = aDNSServer;
