@@ -37,6 +37,7 @@ public:
 
 private:
 	uint8_t sockindex;
+	constexpr uint8_t ERROR = -1;
 };
 
 #endif

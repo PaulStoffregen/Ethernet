@@ -72,7 +72,7 @@ int EthernetClient::read(uint8_t *buf, size_t size)
 
 int EthernetClient::peek()
 {
-	if (sockindex >= MAX_SOCK_NUM) return -1;
+	if (sockindex >= MAX_SOCK_NUM) return ERROR;
 	if (!available()) return -1;
 	return socketPeek(sockindex);
 }
@@ -81,7 +81,7 @@ int EthernetClient::read()
 {
 	uint8_t b;
 	if (socketRecv(sockindex, &b, 1) > 0) return b;
-	return -1;
+	return ERROR;
 }
 
 void EthernetClient::flush()
