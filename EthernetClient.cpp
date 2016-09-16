@@ -79,8 +79,8 @@ int EthernetClient::peek()
 
 int EthernetClient::read()
 {
-	uint8_t b;
-	if (socketRecv(sockindex, &b, 1) > 0) return b;
+	uint8_t result;
+	if (socketRecv(sockindex, &result, 1) > 0) return result;
 	return ERROR;
 }
 
