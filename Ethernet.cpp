@@ -3,9 +3,9 @@
 #include "Dhcp.h"
 
 IPAddress EthernetClass::_dnsServerAddress;
-DhcpClass* EthernetClass::_dhcp = NULL;
+DhcpClass* EthernetClass::_dhcp = nullptr;
 
-int EthernetClass::begin(uint8_t *mac, unsigned long timeout, unsigned long responseTimeout)
+int EthernetClass::begin(uint8_t *mac, const unsigned long timeout, const unsigned long responseTimeout)
 {
 	static DhcpClass s_dhcp;
 	_dhcp = &s_dhcp;
@@ -18,8 +18,8 @@ int EthernetClass::begin(uint8_t *mac, unsigned long timeout, unsigned long resp
 	SPI.endTransaction();
 
 	// Now try to get our config info from a DHCP server
-	int ret = _dhcp->beginWithDHCP(mac, timeout, responseTimeout);
-	if (ret == 1) {
+	int result = _dhcp->beginWithDHCP(mac, timeout, responseTimeout);
+	if (result == 1) {
 		// We've successfully found a DHCP server and got our configuration
 		// info, so set things accordingly
 		SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
@@ -30,10 +30,10 @@ int EthernetClass::begin(uint8_t *mac, unsigned long timeout, unsigned long resp
 		_dnsServerAddress = _dhcp->getDnsServerIp();
 		socketPortRand(micros());
 	}
-	return ret;
+	return result;
 }
 
-void EthernetClass::begin(uint8_t *mac, IPAddress ip)
+void EthernetClass::begin(uint8_t *mac, const IPAddress ip)
 {
 	// Assume the DNS server will be the machine on the same network as the local IP
 	// but with last octet being '1'
@@ -42,7 +42,7 @@ void EthernetClass::begin(uint8_t *mac, IPAddress ip)
 	begin(mac, ip, dns);
 }
 
-void EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns)
+void EthernetClass::begin(uint8_t *mac, const IPAddress ip, const IPAddress dns)
 {
 	// Assume the gateway will be the machine on the same network as the local IP
 	// but with last octet being '1'
@@ -51,13 +51,13 @@ void EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns)
 	begin(mac, ip, dns, gateway);
 }
 
-void EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress gateway)
+void EthernetClass::begin(uint8_t *mac, const IPAddress ip, const IPAddress dns, const IPAddress gateway)
 {
 	IPAddress subnet(255, 255, 255, 0);
 	begin(mac, ip, dns, gateway, subnet);
 }
 
-void EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress gateway, IPAddress subnet)
+void EthernetClass::begin(uint8_t *mac, const IPAddress ip, const IPAddress dns, const IPAddress gateway, const IPAddress subnet)
 {
 	W5100.init();
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
@@ -77,11 +77,11 @@ void EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress g
 
 int EthernetClass::maintain()
 {
-	int rc = DHCP_CHECK_NONE;
-	if (_dhcp != NULL) {
+	int result = DHCP_CHECK_NONE;
+	if (_dhcp != nullptr) {
 		// we have a pointer to dhcp, use it
-		rc = _dhcp->checkLease();
-		switch (rc) {
+		result = _dhcp->checkLease();
+		switch (result) {
 		case DHCP_CHECK_NONE:
 			//nothing done
 			break;
@@ -100,34 +100,34 @@ int EthernetClass::maintain()
 			break;
 		}
 	}
-	return rc;
+	return result;
 }
 
 IPAddress EthernetClass::localIP()
 {
-	IPAddress ret;
+	IPAddress address;
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	W5100.getIPAddress(ret.raw_address());
+	W5100.getIPAddress(address.raw_address());
 	SPI.endTransaction();
-	return ret;
+	return address;
 }
 
 IPAddress EthernetClass::subnetMask()
 {
-	IPAddress ret;
+	IPAddress address;
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	W5100.getSubnetMask(ret.raw_address());
+	W5100.getSubnetMask(address.raw_address());
 	SPI.endTransaction();
-	return ret;
+	return address;
 }
 
 IPAddress EthernetClass::gatewayIP()
 {
-	IPAddress ret;
+	IPAddress result;
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	W5100.getGatewayIp(ret.raw_address());
+	W5100.getGatewayIp(result.raw_address());
 	SPI.endTransaction();
-	return ret;
+	return result;
 }
 
 

@@ -72,16 +72,16 @@ int EthernetClient::read(uint8_t *buf, size_t size)
 
 int EthernetClient::peek()
 {
-	if (sockindex >= MAX_SOCK_NUM) return -1;
+	if (sockindex >= MAX_SOCK_NUM) return ERROR;
 	if (!available()) return -1;
 	return socketPeek(sockindex);
 }
 
 int EthernetClient::read()
 {
-	uint8_t b;
-	if (socketRecv(sockindex, &b, 1) > 0) return b;
-	return -1;
+	uint8_t result;
+	if (socketRecv(sockindex, &result, 1) > 0) return result;
+	return ERROR;
 }
 
 void EthernetClient::flush()
@@ -126,9 +126,9 @@ uint8_t EthernetClient::status()
 // EthernetServer::available() as the condition in an if-statement.
 
 bool EthernetClient::operator==(const EthernetClient& rhs) {
-	if (sockindex != rhs.sockindex) return false;
-	if (sockindex >= MAX_SOCK_NUM) return false;
-	if (rhs.sockindex >= MAX_SOCK_NUM) return false;
+	if ((sockindex != rhs.sockindex) || (sockindex >= MAX_SOCK_NUM) || (rhs.sockindex >= MAX_SOCK_NUM)) {
+		return false;
+	}
 	return true;
 }
 

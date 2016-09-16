@@ -44,6 +44,7 @@
 
 class EthernetUDP : public UDP {
 private:
+  constexpr int ERROR = -1;
   uint16_t _port; // local port to listen on
   IPAddress _remoteIP; // remote IP address for the incoming packet whilst it's being processed
   uint16_t _remotePort; // remote port for the incoming packet whilst it's being processed

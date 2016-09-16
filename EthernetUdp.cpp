@@ -141,7 +141,7 @@ int EthernetUDP::read()
 	}
 
 	// If we get here, there's no data available
-	return -1;
+	return ERROR;
 }
 
 int EthernetUDP::read(unsigned char* buffer, size_t len)
@@ -163,7 +163,7 @@ int EthernetUDP::read(unsigned char* buffer, size_t len)
 		}
 	}
 	// If we get here, there's no data available or recv failed
-	return -1;
+	return ERROR;
 }
 
 int EthernetUDP::peek()
@@ -171,7 +171,7 @@ int EthernetUDP::peek()
 	// Unlike recv, peek doesn't check to see if there's any data available, so we must.
 	// If the user hasn't called parsePacket yet then return nothing otherwise they
 	// may get the UDP header
-	if (sockindex >= MAX_SOCK_NUM || _remaining == 0) return -1;
+	if (sockindex >= MAX_SOCK_NUM || _remaining == 0) return ERROR;
 	return socketPeek(sockindex);
 }
 

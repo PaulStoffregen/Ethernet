@@ -11,43 +11,6 @@
 //#include <stdlib.h>
 #include "Arduino.h"
 
-
-#define SOCKET_NONE	255
-// Various flags and header field values for a DNS message
-#define UDP_HEADER_SIZE	8
-#define DNS_HEADER_SIZE	12
-#define TTL_SIZE        4
-#define QUERY_FLAG               (0)
-#define RESPONSE_FLAG            (1<<15)
-#define QUERY_RESPONSE_MASK      (1<<15)
-#define OPCODE_STANDARD_QUERY    (0)
-#define OPCODE_INVERSE_QUERY     (1<<11)
-#define OPCODE_STATUS_REQUEST    (2<<11)
-#define OPCODE_MASK              (15<<11)
-#define AUTHORITATIVE_FLAG       (1<<10)
-#define TRUNCATION_FLAG          (1<<9)
-#define RECURSION_DESIRED_FLAG   (1<<8)
-#define RECURSION_AVAILABLE_FLAG (1<<7)
-#define RESP_NO_ERROR            (0)
-#define RESP_FORMAT_ERROR        (1)
-#define RESP_SERVER_FAILURE      (2)
-#define RESP_NAME_ERROR          (3)
-#define RESP_NOT_IMPLEMENTED     (4)
-#define RESP_REFUSED             (5)
-#define RESP_MASK                (15)
-#define TYPE_A                   (0x0001)
-#define CLASS_IN                 (0x0001)
-#define LABEL_COMPRESSION_MASK   (0xC0)
-// Port number that DNS servers listen on
-#define DNS_PORT        53
-
-// Possible return codes from ProcessResponse
-#define SUCCESS          1
-#define TIMED_OUT        -1
-#define INVALID_SERVER   -2
-#define TRUNCATED        -3
-#define INVALID_RESPONSE -4
-
 void DNSClient::begin(const IPAddress& aDNSServer)
 {
     iDNSServer = aDNSServer;
@@ -139,12 +102,12 @@ int DNSClient::getHostByName(const char* aHostname, IPAddress& aResult)
                         while ((wait_retries < 3) && (ret == TIMED_OUT))
                         {
                             ret = ProcessResponse(5000, aResult);
-                            wait_retries++;
+							++wait_retries;
                         }
                     }
                 }
             }
-            retries++;
+			++retries;
         }
 
         // We're done with the socket now
@@ -216,7 +179,7 @@ uint16_t DNSClient::BuildRequest(const char* aName)
             // And then write out the section
             iUdp.write((uint8_t*)start, end-start);
         }
-        start = end+1;
+		start = end + 1;
     }
 
     // We've got to the end of the question name, so
@@ -234,9 +197,9 @@ uint16_t DNSClient::BuildRequest(const char* aName)
 }
 
 
-uint16_t DNSClient::ProcessResponse(uint16_t aTimeout, IPAddress& aAddress)
+uint16_t DNSClient::ProcessResponse(const uint16_t aTimeout, const IPAddress& aAddress)
 {
-    uint32_t startTime = millis();
+	const uint32_t startTime = millis();
 
     // Wait for a response packet
     while(iUdp.parsePacket() <= 0)
@@ -251,7 +214,7 @@ uint16_t DNSClient::ProcessResponse(uint16_t aTimeout, IPAddress& aAddress)
     //uint8_t header[DNS_HEADER_SIZE]; // Enough space to reuse for the DNS header
     union {
         uint8_t  byte[DNS_HEADER_SIZE]; // Enough space to reuse for the DNS header
-        uint16_t word[DNS_HEADER_SIZE/2];
+		uint16_t word[DNS_HEADER_SIZE / 2];
     } header;
 
     // Check that it's a response from the right server and the right port
@@ -297,7 +260,7 @@ uint16_t DNSClient::ProcessResponse(uint16_t aTimeout, IPAddress& aAddress)
     }
 
     // Skip over any questions
-    for (uint16_t i =0; i < htons(header.word[2]); i++)
+	for (uint16_t i = 0; i < htons(header.word[2]); ++i)
     {
         // Skip over the name
         uint8_t len;
@@ -316,7 +279,7 @@ uint16_t DNSClient::ProcessResponse(uint16_t aTimeout, IPAddress& aAddress)
         } while (len != 0);
 
         // Now jump over the type and class
-        for (int i =0; i < 4; i++)
+		for (int i =0; i < 4; ++i)
         {
             iUdp.read(); // we don't care about the returned byte
         }
@@ -327,7 +290,7 @@ uint16_t DNSClient::ProcessResponse(uint16_t aTimeout, IPAddress& aAddress)
     // type A answer) and some authority and additional resource records but
     // we're going to ignore all of them.
 
-    for (uint16_t i =0; i < answerCount; i++)
+	for (uint16_t i = 0; i < answerCount; ++i)
     {
         // Skip the name
         uint8_t len;
@@ -370,7 +333,7 @@ uint16_t DNSClient::ProcessResponse(uint16_t aTimeout, IPAddress& aAddress)
         iUdp.read((uint8_t*)&answerClass, sizeof(answerClass));
 
         // Ignore the Time-To-Live as we don't do any caching
-        for (int i =0; i < TTL_SIZE; i++)
+		for (int i =0; i < TTL_SIZE; ++i)
         {
             iUdp.read(); // we don't care about the returned byte
         }
@@ -394,7 +357,7 @@ uint16_t DNSClient::ProcessResponse(uint16_t aTimeout, IPAddress& aAddress)
         else
         {
             // This isn't an answer type we're after, move onto the next one
-            for (uint16_t i =0; i < htons(header_flags); i++)
+			for (uint16_t i =0; i < htons(header_flags); ++i)
             {
                 iUdp.read(); // we don't care about the returned byte
             }
