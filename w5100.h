@@ -13,6 +13,7 @@
 #include <avr/pgmspace.h>
 #include <SPI.h>
 
+//#define SPI_ETHERNET_SETTINGS SPISettings(30000000, MSBFIRST, SPI_MODE0)
 #define SPI_ETHERNET_SETTINGS SPISettings(14000000, MSBFIRST, SPI_MODE0)
 //#define SPI_ETHERNET_SETTINGS SPISettings(8000000, MSBFIRST, SPI_MODE0)
 //#define SPI_ETHERNET_SETTINGS SPISettings(4000000, MSBFIRST, SPI_MODE0)
@@ -252,6 +253,7 @@ private:
   static void reset(void);
   static uint8_t isW5100(void);
   static uint8_t isW5200(void);
+  static uint8_t isW5500(void);
 
   static const uint8_t  RST = 7; // Reset BIT
 

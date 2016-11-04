@@ -49,7 +49,7 @@ uint8_t W5100Class::init(void)
   uint8_t i;
 
   delay(200);
-  //Serial.println("w5100 init");
+  Serial.println("w5100 init");
 
 #ifdef USE_SPIFIFO
   SPI.begin();
@@ -85,8 +85,15 @@ uint8_t W5100Class::init(void)
       writeSnTX_SIZE(i, 0);
     }
 
+  } else if (isW5500()) {
+    CH_BASE = 0x1000;
+    SSIZE = 2048;
+    SMASK = 0x07FF;
+    TXBUF_BASE = 0x8000;
+    RXBUF_BASE = 0xC000;
+
   } else {
-    //Serial.println("no chip :-(");
+    Serial.println("no chip :-(");
     chip = 0;
     SPI.endTransaction();
     return 0; // no known chip is responding :-(
@@ -103,7 +110,7 @@ void W5100Class::reset(void)
 {
   uint16_t count=0;
 
-  //Serial.println("W5100 reset");
+  Serial.println("W5100 reset");
   writeMR(1<<RST);
   while (++count < 20) {
     uint8_t mr = readMR();
@@ -117,7 +124,7 @@ void W5100Class::reset(void)
 uint8_t W5100Class::isW5100(void)
 {
   chip = 51;
-  //Serial.println("W5100 detect W5100 chip");
+  Serial.println("w5100.cpp: detect W5100 chip");
   reset();
   writeMR(0x10);
   if (readMR() != 0x10) return 0;
@@ -125,7 +132,7 @@ uint8_t W5100Class::isW5100(void)
   if (readMR() != 0x12) return 0;
   writeMR(0x00);
   if (readMR() != 0x00) return 0;
-  //Serial.println("chip is W5100");
+  Serial.println("chip is W5100");
   return 1;
 }
 
@@ -133,7 +140,7 @@ uint8_t W5100Class::isW5200(void)
 {
   uint8_t mr;
   chip = 52;
-  //Serial.println("W5100 detect W5200 chip");
+  Serial.println("w5100.cpp: detect W5200 chip");
 #ifdef W5200_RESET_PIN
   pinMode(W5200_RESET_PIN, OUTPUT);
   digitalWrite(W5200_RESET_PIN, LOW);
@@ -144,23 +151,55 @@ uint8_t W5100Class::isW5200(void)
   reset();
   writeMR(0x08);
   mr = readMR();
-  //Serial.print("mr=");
-  //Serial.println(mr, HEX);
+  Serial.print("mr=");
+  Serial.println(mr, HEX);
   if (mr != 0x08) return 0;
   writeMR(0x10);
   mr = readMR();
-  //Serial.print("mr=");
-  //Serial.println(mr, HEX);
+  Serial.print("mr=");
+  Serial.println(mr, HEX);
   if (mr != 0x10) return 0;
   writeMR(0x00);
   mr = readMR();
-  //Serial.print("mr=");
-  //Serial.println(mr, HEX);
+  Serial.print("mr=");
+  Serial.println(mr, HEX);
   if (mr != 0x00) return 0;
-  //Serial.println("chip is W5200");
+  Serial.println("chip is W5200");
   return 1;
 }
 
+uint8_t W5100Class::isW5500(void)
+{
+  uint8_t mr, count=0;
+
+  chip = 55;
+  Serial.println("w5100.cpp: detect W5500 chip");
+  reset();
+  writeMR(0x08);
+  mr = readMR();
+  Serial.print("mr=");
+  Serial.println(mr, HEX);
+  if (mr != 0x08) return 0;
+  writeMR(0x10);
+  mr = readMR();
+  Serial.print("mr=");
+  Serial.println(mr, HEX);
+  if (mr != 0x10) return 0;
+  writeMR(0x00);
+  mr = readMR();
+  Serial.print("mr=");
+  Serial.println(mr, HEX);
+  if (mr != 0x00) return 0;
+  writeMR(0x80);
+  while (1) {
+    if (readMR() == 0) break;
+    if (++count > 100) return 0;
+  }
+  Serial.print("count=");
+  Serial.println(count);
+  Serial.println("chip is W5500");
+  return 1;
+}
 
 
 #ifdef USE_SPIFIFO
@@ -176,7 +215,7 @@ uint16_t W5100Class::write(uint16_t addr, const uint8_t *buf, uint16_t len)
 	SPIFIFO.read();
 	SPIFIFO.read();
     }
-  } else {
+  } else if (chip == 52) {
 	SPIFIFO.clear();
 	SPIFIFO.write16(addr, SPI_CONTINUE);
 	SPIFIFO.write16(len | 0x8000, SPI_CONTINUE);
@@ -186,6 +225,48 @@ uint16_t W5100Class::write(uint16_t addr, const uint8_t *buf, uint16_t len)
 	}
 	SPIFIFO.read();
 	SPIFIFO.read();
+  } else {
+	//SPIFIFO.clear();
+	SPIFIFO.write16(addr & 0x03FF, SPI_CONTINUE);
+	if (addr < 0x100) {
+		// common registers 00nn
+		SPIFIFO.write16(0x0400 | *buf++,
+			((len > 1) ? SPI_CONTINUE : 0));
+	} else if (addr < 0x8000) {
+		// socket registers  10nn, 11nn, 12nn, 13nn, etc
+		SPIFIFO.write16(((addr << 5) & 0xE000) | 0x0C00 | *buf++,
+			((len > 1) ? SPI_CONTINUE : 0));
+	} else if (addr < 0xC000) {
+		// transmit buffers  8000-87FF, 8800-8FFF, 9000-97FF, etc
+		SPIFIFO.write16(((addr << 2) & 0xE000) | 0x1400 | *buf++,
+			((len > 1) ? SPI_CONTINUE : 0));
+	} else {
+		// receive buffers
+		SPIFIFO.write16(((addr << 2) & 0xE000) | 0x1C00 | *buf++,
+			((len > 1) ? SPI_CONTINUE : 0));
+	}
+#if 0
+	SPIFIFO.read();
+	do {
+		if (len > 1) SPIFIFO.write(*buf++, (len > 2) ? SPI_CONTINUE : 0);
+		SPIFIFO.read();
+		len--;
+	} while (len > 0);
+#else
+	len--;
+	while (len >= 2) {
+		len -= 2;
+		SPIFIFO.write16((*buf << 8) | *(buf+1), (len == 0) ? 0 : SPI_CONTINUE);
+		buf += 2;
+		SPIFIFO.read();
+	}
+	if (len) {
+		SPIFIFO.write(*buf);
+		SPIFIFO.read();
+	}
+	SPIFIFO.read();
+	SPIFIFO.read();
+#endif
   }
   return len;
 }
@@ -202,7 +283,7 @@ uint16_t W5100Class::write(uint16_t addr, const uint8_t *buf, uint16_t len)
       SPI.transfer(buf[i]);
       resetSS();
     }
-  } else {
+  } else if (chip == 52) {
     setSS();
     SPI.transfer(addr >> 8);
     SPI.transfer(addr & 0xFF);
@@ -212,10 +293,43 @@ uint16_t W5100Class::write(uint16_t addr, const uint8_t *buf, uint16_t len)
       SPI.transfer(buf[i]);
     }
     resetSS();
+  } else {
+    setSS();
+    if (addr < 0x100) {
+      // common registers 00nn
+      SPI.transfer(0);
+      SPI.transfer(addr & 0xFF);
+      SPI.transfer(0x04);
+    } else if (addr < 0x8000) {
+      // socket registers  10nn, 11nn, 12nn, 13nn, etc
+      SPI.transfer(0);
+      SPI.transfer(addr & 0xFF);
+      SPI.transfer(((addr >> 3) & 0xE0) | 0x0C);
+    } else if (addr < 0xC000) {
+      // transmit buffers  8000-87FF, 8800-8FFF, 9000-97FF, etc
+      //  10## #nnn nnnn nnnn
+      SPI.transfer((addr >> 8) & 0x03);
+      SPI.transfer(addr & 0xFF);
+      SPI.transfer(((addr >> 6) & 0xE0) | 0x14);
+    } else {
+      // receive buffers
+      SPI.transfer((addr >> 8) & 0x03);
+      SPI.transfer(addr & 0xFF);
+      SPI.transfer(((addr >> 6) & 0xE0) | 0x1C);
+    }
+    for (uint16_t i=0; i<len; i++) {
+      SPI.transfer(buf[i]);
+    }
+    resetSS();
   }
   return len;
 }
 #endif
+
+
+
+
+
 
 
 #ifdef USE_SPIFIFO
@@ -243,7 +357,7 @@ uint16_t W5100Class::read(uint16_t addr, uint8_t *buf, uint16_t len)
 	buf[i] = SPIFIFO.read();
 	#endif
     }
-  } else {
+  } else if (chip == 52) {
 	// len = 1:  write header, write 1 byte, read
 	// len = 2:  write header, write 2 byte, read
 	// len = 3,5,7
@@ -300,6 +414,88 @@ uint16_t W5100Class::read(uint16_t addr, uint8_t *buf, uint16_t len)
 		*buf++ = val >> 8;
 		*buf++ = val;
 	}
+  } else {
+	//SPIFIFO.clear();
+	SPIFIFO.write16(addr & 0x03FF, SPI_CONTINUE);
+	if (addr < 0x100) {
+		// common registers 00nn
+		SPIFIFO.write16(0,
+			((len > 1) ? SPI_CONTINUE : 0));
+	} else if (addr < 0x8000) {
+		// socket registers  10nn, 11nn, 12nn, 13nn, etc
+		SPIFIFO.write16(((addr << 5) & 0xE000) | 0x0800,
+			((len > 1) ? SPI_CONTINUE : 0));
+	} else if (addr < 0xC000) {
+		// transmit buffers  8000-87FF, 8800-8FFF, 9000-97FF, etc
+		SPIFIFO.write16(((addr << 2) & 0xE000) | 0x1000,
+			((len > 1) ? SPI_CONTINUE : 0));
+	} else {
+		// receive buffers
+		SPIFIFO.write16(((addr << 2) & 0xE000) | 0x1800,
+			((len > 1) ? SPI_CONTINUE : 0));
+	}
+	SPIFIFO.read();
+#if 0
+	do {
+		if (len > 1) SPIFIFO.write(0, (len > 2) ? SPI_CONTINUE : 0);
+		*buf++ = SPIFIFO.read();
+		len--;
+	} while (len > 0);
+#else
+	if (len <= 1) {
+		*buf++ = SPIFIFO.read();
+	} else if (len == 2) {
+		SPIFIFO.write(0);
+		*buf++ = SPIFIFO.read();
+		*buf++ = SPIFIFO.read();
+	} else if (len & 1) {
+		#if 1
+		uint32_t count = len >> 1;
+		SPIFIFO.write16(0, (count > 1) ? SPI_CONTINUE : 0);
+		*buf++ = SPIFIFO.read();
+		while (count > 1) {
+			count--;
+			SPIFIFO.write16(0, (count > 1) ? SPI_CONTINUE : 0);
+			uint32_t val = SPIFIFO.read();
+			*buf++ = val >> 8;
+			*buf++ = val;
+		}
+		uint32_t val = SPIFIFO.read();
+		*buf++ = val >> 8;
+		*buf++ = val;
+		#else
+		do {
+			if (len > 1) SPIFIFO.write(0, (len > 2) ? SPI_CONTINUE : 0);
+			*buf++ = SPIFIFO.read();
+			len--;
+		} while (len > 0);
+		#endif
+	} else {
+		#if 1
+		SPIFIFO.write16(0, SPI_CONTINUE);
+		*buf++ = SPIFIFO.read();
+		uint32_t count = len >> 1;
+		while (count > 1) {
+			count--;
+			if (count > 1) {
+				SPIFIFO.write16(0, SPI_CONTINUE);
+			} else {
+				SPIFIFO.write(0, 0);
+			}
+			uint32_t val = SPIFIFO.read();
+			*buf++ = val >> 8;
+			*buf++ = val;
+		}
+		*buf = SPIFIFO.read();
+		#else
+		do {
+			if (len > 1) SPIFIFO.write(0, (len > 2) ? SPI_CONTINUE : 0);
+			*buf++ = SPIFIFO.read();
+			len--;
+		} while (len > 0);
+		#endif
+	}
+#endif
   }
   return len;
 }
@@ -316,12 +512,40 @@ uint16_t W5100Class::read(uint16_t addr, uint8_t *buf, uint16_t len)
       buf[i] = SPI.transfer(0);
       resetSS();
     }
-  } else {
+  } else if (chip == 52) {
     setSS();
     SPI.transfer(addr >> 8);
     SPI.transfer(addr & 0xFF);
     SPI.transfer((len >> 8) & 0x7F);
     SPI.transfer(len & 0xFF);
+    for (uint16_t i=0; i<len; i++) {
+      buf[i] = SPI.transfer(0);
+    }
+    resetSS();
+  } else {
+    setSS();
+    if (addr < 0x100) {
+      // common registers 00nn
+      SPI.transfer(0);
+      SPI.transfer(addr & 0xFF);
+      SPI.transfer(0x00);
+    } else if (addr < 0x8000) {
+      // socket registers  10nn, 11nn, 12nn, 13nn, etc
+      SPI.transfer(0);
+      SPI.transfer(addr & 0xFF);
+      SPI.transfer(((addr >> 3) & 0xE0) | 0x08);
+    } else if (addr < 0xC000) {
+      // transmit buffers  8000-87FF, 8800-8FFF, 9000-97FF, etc
+      //  10## #nnn nnnn nnnn
+      SPI.transfer((addr >> 8) & 0x03);
+      SPI.transfer(addr & 0xFF);
+      SPI.transfer(((addr >> 6) & 0xE0) | 0x10);
+    } else {
+      // receive buffers
+      SPI.transfer((addr >> 8) & 0x03);
+      SPI.transfer(addr & 0xFF);
+      SPI.transfer(((addr >> 6) & 0xE0) | 0x18);
+    }
     for (uint16_t i=0; i<len; i++) {
       buf[i] = SPI.transfer(0);
     }
