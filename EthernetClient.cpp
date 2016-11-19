@@ -40,6 +40,7 @@ int EthernetClient::connect(IPAddress ip, uint16_t port)
 	while (1) {
 		uint8_t stat = socketStatus(sockindex);
 		if (stat == SnSR::ESTABLISHED) return 1;
+		if (stat == SnSR::CLOSE_WAIT) return 1;
 		if (stat == SnSR::CLOSED) return 0;
 		delay(1);
 	}
