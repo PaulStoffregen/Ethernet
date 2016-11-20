@@ -26,8 +26,8 @@ static socketstate_t state[MAX_SOCK_NUM];
 
 static uint16_t getSnTX_FSR(uint8_t s);
 static uint16_t getSnRX_RSR(uint8_t s);
-static void send_data_processing(uint8_t s, uint16_t offset, const uint8_t *data, uint16_t len);
-static void read_data(uint8_t s, uint16_t src, volatile uint8_t *dst, uint16_t len);
+static void write_data(uint8_t s, uint16_t offset, const uint8_t *data, uint16_t len);
+static void read_data(uint8_t s, uint16_t src, uint8_t *dst, uint16_t len);
 
 
 
@@ -187,7 +187,7 @@ static uint16_t getSnRX_RSR(uint8_t s)
 #endif
 }
 
-static void read_data(uint8_t s, uint16_t src, volatile uint8_t *dst, uint16_t len)
+static void read_data(uint8_t s, uint16_t src, uint8_t *dst, uint16_t len)
 {
 	uint16_t size;
 	uint16_t src_mask;
@@ -197,13 +197,13 @@ static void read_data(uint8_t s, uint16_t src, volatile uint8_t *dst, uint16_t l
 	src_mask = (uint16_t)src & W5100.SMASK;
 	src_ptr = W5100.RBASE[s] + src_mask;
 
-	if ((src_mask + len) > W5100.SSIZE) {
-		size = W5100.SSIZE - src_mask;
-		W5100.read(src_ptr, (uint8_t *)dst, size);
-		dst += size;
-		W5100.read(W5100.RBASE[s], (uint8_t *) dst, len - size);
+	if (W5100.hasOffsetAddressMapping() || src_mask + len <= W5100.SSIZE) {
+		W5100.read(src_ptr, dst, len);
 	} else {
-		W5100.read(src_ptr, (uint8_t *) dst, len);
+		size = W5100.SSIZE - src_mask;
+		W5100.read(src_ptr, dst, size);
+		dst += size;
+		W5100.read(W5100.RBASE[s], dst, len - size);
 	}
 }
 
@@ -296,20 +296,20 @@ static uint16_t getSnTX_FSR(uint8_t s)
 }
 
 
-static void send_data_processing(uint8_t s, uint16_t data_offset, const uint8_t *data, uint16_t len)
+static void write_data(uint8_t s, uint16_t data_offset, const uint8_t *data, uint16_t len)
 {
 	uint16_t ptr = W5100.readSnTX_WR(s);
 	ptr += data_offset;
 	uint16_t offset = ptr & W5100.SMASK;
 	uint16_t dstAddr = offset + W5100.SBASE[s];
 
-	if (offset + len > W5100.SSIZE) {
+	if (W5100.hasOffsetAddressMapping() || offset + len <= W5100.SSIZE) {
+		W5100.write(dstAddr, data, len);
+	} else {
 		// Wrap around circular buffer
 		uint16_t size = W5100.SSIZE - offset;
 		W5100.write(dstAddr, data, size);
 		W5100.write(W5100.SBASE[s], data + size, len - size);
-	} else {
-		W5100.write(dstAddr, data, len);
 	}
 	ptr += len;
 	W5100.writeSnTX_WR(s, ptr);
@@ -347,7 +347,7 @@ uint16_t socketSend(uint8_t s, const uint8_t * buf, uint16_t len)
 
 	// copy data
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	send_data_processing(s, 0, (uint8_t *)buf, ret);
+	write_data(s, 0, (uint8_t *)buf, ret);
 	W5100.execCmdSn(s, Sock_SEND);
 
 	/* +2008.01 bj */
@@ -379,7 +379,7 @@ uint16_t socketBufferData(uint8_t s, uint16_t offset, const uint8_t* buf, uint16
 	} else {
 		ret = len;
 	}
-	send_data_processing(s, offset, buf, ret);
+	write_data(s, offset, buf, ret);
 	SPI.endTransaction();
 	return ret;
 }

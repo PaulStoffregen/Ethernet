@@ -265,6 +265,10 @@ public:
   //receive and transmit have same buffer sizes
   static uint16_t SBASE[SOCKETS]; // Tx buffer base address
   static uint16_t RBASE[SOCKETS]; // Rx buffer base address
+  static bool hasOffsetAddressMapping(void) {
+    if (chip == 55) return true;
+    return false;
+  }
 
 private:
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
