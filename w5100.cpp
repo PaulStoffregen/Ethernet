@@ -227,7 +227,7 @@ uint16_t W5100Class::write(uint16_t addr, const uint8_t *buf, uint16_t len)
 	SPIFIFO.read();
   } else {
 	//SPIFIFO.clear();
-	SPIFIFO.write16(addr & 0x03FF, SPI_CONTINUE);
+	SPIFIFO.write16(addr, SPI_CONTINUE);
 	if (addr < 0x100) {
 		// common registers 00nn
 		SPIFIFO.write16(0x0400 | *buf++,
@@ -308,7 +308,7 @@ uint16_t W5100Class::write(uint16_t addr, const uint8_t *buf, uint16_t len)
     } else if (addr < 0xC000) {
       // transmit buffers  8000-87FF, 8800-8FFF, 9000-97FF, etc
       //  10## #nnn nnnn nnnn
-      SPI.transfer((addr >> 8) & 0x03);
+      SPI.transfer(addr >> 8);
       SPI.transfer(addr & 0xFF);
       SPI.transfer(((addr >> 6) & 0xE0) | 0x14);
     } else {
@@ -416,7 +416,7 @@ uint16_t W5100Class::read(uint16_t addr, uint8_t *buf, uint16_t len)
 	}
   } else {
 	//SPIFIFO.clear();
-	SPIFIFO.write16(addr & 0x03FF, SPI_CONTINUE);
+	SPIFIFO.write16(addr, SPI_CONTINUE);
 	if (addr < 0x100) {
 		// common registers 00nn
 		SPIFIFO.write16(0,
@@ -537,12 +537,12 @@ uint16_t W5100Class::read(uint16_t addr, uint8_t *buf, uint16_t len)
     } else if (addr < 0xC000) {
       // transmit buffers  8000-87FF, 8800-8FFF, 9000-97FF, etc
       //  10## #nnn nnnn nnnn
-      SPI.transfer((addr >> 8) & 0x03);
+      SPI.transfer(addr >> 8);
       SPI.transfer(addr & 0xFF);
       SPI.transfer(((addr >> 6) & 0xE0) | 0x10);
     } else {
       // receive buffers
-      SPI.transfer((addr >> 8) & 0x03);
+      SPI.transfer(addr >> 8);
       SPI.transfer(addr & 0xFF);
       SPI.transfer(((addr >> 6) & 0xE0) | 0x18);
     }
