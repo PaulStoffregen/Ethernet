@@ -49,7 +49,7 @@ uint8_t W5100Class::init(void)
   uint8_t i;
 
   delay(200);
-  Serial.println("w5100 init");
+  //Serial.println("w5100 init");
 
 #ifdef USE_SPIFIFO
   SPI.begin();
@@ -93,7 +93,7 @@ uint8_t W5100Class::init(void)
     RXBUF_BASE = 0xC000;
 
   } else {
-    Serial.println("no chip :-(");
+    //Serial.println("no chip :-(");
     chip = 0;
     SPI.endTransaction();
     return 0; // no known chip is responding :-(
@@ -110,7 +110,7 @@ void W5100Class::reset(void)
 {
   uint16_t count=0;
 
-  Serial.println("W5100 reset");
+  //Serial.println("W5100 reset");
   writeMR(1<<RST);
   while (++count < 20) {
     uint8_t mr = readMR();
@@ -124,7 +124,7 @@ void W5100Class::reset(void)
 uint8_t W5100Class::isW5100(void)
 {
   chip = 51;
-  Serial.println("w5100.cpp: detect W5100 chip");
+  //Serial.println("w5100.cpp: detect W5100 chip");
   reset();
   writeMR(0x10);
   if (readMR() != 0x10) return 0;
@@ -132,7 +132,7 @@ uint8_t W5100Class::isW5100(void)
   if (readMR() != 0x12) return 0;
   writeMR(0x00);
   if (readMR() != 0x00) return 0;
-  Serial.println("chip is W5100");
+  //Serial.println("chip is W5100");
   return 1;
 }
 
@@ -140,7 +140,7 @@ uint8_t W5100Class::isW5200(void)
 {
   uint8_t mr;
   chip = 52;
-  Serial.println("w5100.cpp: detect W5200 chip");
+  //Serial.println("w5100.cpp: detect W5200 chip");
 #ifdef W5200_RESET_PIN
   pinMode(W5200_RESET_PIN, OUTPUT);
   digitalWrite(W5200_RESET_PIN, LOW);
@@ -151,20 +151,14 @@ uint8_t W5100Class::isW5200(void)
   reset();
   writeMR(0x08);
   mr = readMR();
-  Serial.print("mr=");
-  Serial.println(mr, HEX);
   if (mr != 0x08) return 0;
   writeMR(0x10);
   mr = readMR();
-  Serial.print("mr=");
-  Serial.println(mr, HEX);
   if (mr != 0x10) return 0;
   writeMR(0x00);
   mr = readMR();
-  Serial.print("mr=");
-  Serial.println(mr, HEX);
   if (mr != 0x00) return 0;
-  Serial.println("chip is W5200");
+  //Serial.println("chip is W5200");
   return 1;
 }
 
@@ -173,31 +167,23 @@ uint8_t W5100Class::isW5500(void)
   uint8_t mr, count=0;
 
   chip = 55;
-  Serial.println("w5100.cpp: detect W5500 chip");
+  //Serial.println("w5100.cpp: detect W5500 chip");
   reset();
   writeMR(0x08);
   mr = readMR();
-  Serial.print("mr=");
-  Serial.println(mr, HEX);
   if (mr != 0x08) return 0;
   writeMR(0x10);
   mr = readMR();
-  Serial.print("mr=");
-  Serial.println(mr, HEX);
   if (mr != 0x10) return 0;
   writeMR(0x00);
   mr = readMR();
-  Serial.print("mr=");
-  Serial.println(mr, HEX);
   if (mr != 0x00) return 0;
   writeMR(0x80);
   while (1) {
     if (readMR() == 0) break;
     if (++count > 100) return 0;
   }
-  Serial.print("count=");
-  Serial.println(count);
-  Serial.println("chip is W5500");
+  //Serial.println("chip is W5500");
   return 1;
 }
 
