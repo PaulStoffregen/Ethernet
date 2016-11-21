@@ -299,7 +299,7 @@ uint16_t W5100Class::write(uint16_t addr, const uint8_t *buf, uint16_t len)
       SPI.transfer(((addr >> 6) & 0xE0) | 0x14);
     } else {
       // receive buffers
-      SPI.transfer((addr >> 8) & 0x03);
+      SPI.transfer(addr >> 8);
       SPI.transfer(addr & 0xFF);
       SPI.transfer(((addr >> 6) & 0xE0) | 0x1C);
     }
