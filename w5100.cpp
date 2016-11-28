@@ -18,15 +18,6 @@
 #endif
 #endif
 
-// The W5200 really does require a proper reset pulse!
-// Its SPI state machine remembers the previously started
-// burst transfer, even after SS is deasserted.  Wiznet's
-// documentation does not mention this very unfortunate
-// fact, which means you to really must reset the chip if
-// it may have ever heard an partial transfer (eg, from a
-// previous run before clicking Upload in Arduino) or if
-// its SS and SCK pins are ever left floating.
-#define W5200_RESET_PIN  9
 #define W5200_SS_PIN    10
 
 #include "Arduino.h"
@@ -45,146 +36,158 @@ W5100Class W5100;
 
 uint8_t W5100Class::init(void)
 {
-  uint16_t TXBUF_BASE, RXBUF_BASE;
-  uint8_t i;
+	uint16_t TXBUF_BASE, RXBUF_BASE;
+	uint8_t i;
 
-  delay(200);
-  //Serial.println("w5100 init");
+	// Many Ethernet shields have a CAT811 or similar reset chip
+	// connected to W5100 or W5200 chips.  The W5200 will not work at
+	// all, and may even drive its MISO pin, until given an active low
+	// reset pulse!  The CAT811 has a 240 ms typical pulse length, and
+	// a 400 ms worst case maximum pulse length.  MAX811 has a worst
+	// case maximum 560 ms pulse length.  This delay is meant to wait
+	// until the reset pulse is ended.  If your hardware has a shorter
+	// reset time, this can be edited or removed.
+	delay(560);
+	//Serial.println("w5100 init");
 
 #ifdef USE_SPIFIFO
-  SPI.begin();
-  SPIFIFO.begin(W5200_SS_PIN, SPI_CLOCK_12MHz);  // W5100 is 14 MHz max
+	SPI.begin();
+	SPIFIFO.begin(W5200_SS_PIN, SPI_CLOCK_12MHz);  // W5100 is 14 MHz max
 #else
-  SPI.begin();
-  SPI.setClockDivider(SPI_CLOCK_DIV2);
-  initSS();
+	SPI.begin();
+	SPI.setClockDivider(SPI_CLOCK_DIV2);
+	initSS();
 #endif
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
 
-  SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-  if (isW5100()) {
-    CH_BASE = 0x0400;
-    SSIZE = 2048;
-    SMASK = 0x07FF;
-    TXBUF_BASE = 0x4000;
-    RXBUF_BASE = 0x6000;
-    writeTMSR(0x55);
-    writeRMSR(0x55);
-
-  } else if (isW5200()) {
-    CH_BASE = 0x4000;
-    SSIZE = 4096;
-    SMASK = 0x0FFF;
-    TXBUF_BASE = 0x8000;
-    RXBUF_BASE = 0xC000;
-    for (i=0; i<MAX_SOCK_NUM; i++) {
-      writeSnRX_SIZE(i, SSIZE >> 10);
-      writeSnTX_SIZE(i, SSIZE >> 10);
-    }
-    for (; i<8; i++) {
-      writeSnRX_SIZE(i, 0);
-      writeSnTX_SIZE(i, 0);
-    }
-
-  } else if (isW5500()) {
-    CH_BASE = 0x1000;
-    SSIZE = 2048;
-    SMASK = 0x07FF;
-    TXBUF_BASE = 0x8000;
-    RXBUF_BASE = 0xC000;
-
-  } else {
-    //Serial.println("no chip :-(");
-    chip = 0;
-    SPI.endTransaction();
-    return 0; // no known chip is responding :-(
-  }
-  for (int i=0; i<MAX_SOCK_NUM; i++) {
-    SBASE[i] = TXBUF_BASE + SSIZE * i;
-    RBASE[i] = RXBUF_BASE + SSIZE * i;
-  }
-  SPI.endTransaction();
-  return 1; // successful init
+	// Attempt W5200 detection first, because W5200 does not properly
+	// reset its SPI state when CS goes high (inactive).  Communication
+	// from detecting the other chips can leave the W5200 in a state
+	// where it won't recover, unless given a reset pulse.
+	if (isW5200()) {
+		CH_BASE = 0x4000;
+		SSIZE = 4096;
+		SMASK = 0x0FFF;
+		TXBUF_BASE = 0x8000;
+		RXBUF_BASE = 0xC000;
+		for (i=0; i<MAX_SOCK_NUM; i++) {
+			writeSnRX_SIZE(i, SSIZE >> 10);
+			writeSnTX_SIZE(i, SSIZE >> 10);
+		}
+		for (; i<8; i++) {
+			writeSnRX_SIZE(i, 0);
+			writeSnTX_SIZE(i, 0);
+		}
+	// Try W5500 next.  Wiznet finally seems to have implemented
+	// SPI well with this chip.  It appears to be very resilient,
+	// so try it after the fragile W5200
+	} else if (isW5500()) {
+		CH_BASE = 0x1000;
+		SSIZE = 2048;
+		SMASK = 0x07FF;
+		TXBUF_BASE = 0x8000;
+		RXBUF_BASE = 0xC000;
+	// Try W5100 last.  This simple chip uses fixed 4 byte frames
+	// for every 8 bit access.  Terribly inefficient, but so simple
+	// it recovers from "hearing" unsuccessful W5100 or W5200
+	// communication.  W5100 is also the only chip without a VERSIONR
+	// register for identification, so we check this last.
+	} else if (isW5100()) {
+		CH_BASE = 0x0400;
+		SSIZE = 2048;
+		SMASK = 0x07FF;
+		TXBUF_BASE = 0x4000;
+		RXBUF_BASE = 0x6000;
+		writeTMSR(0x55);
+		writeRMSR(0x55);
+	// No hardware seems to be present.  Or it could be a W5200
+	// that's heard other SPI communication if its chip select
+	// pin wasn't high when a SD card or other SPI chip was used.
+	} else {
+		//Serial.println("no chip :-(");
+		chip = 0;
+		SPI.endTransaction();
+		return 0; // no known chip is responding :-(
+	}
+	SPI.endTransaction();
+	// Initialize the socket base addresses
+	for (int i=0; i<MAX_SOCK_NUM; i++) {
+		SBASE[i] = TXBUF_BASE + SSIZE * i;
+		RBASE[i] = RXBUF_BASE + SSIZE * i;
+	}
+	return 1; // successful init
 }
 
-void W5100Class::reset(void)
+// Soft reset the Wiznet chip, by writing to its MR register reset bit
+uint8_t W5100Class::softReset(void)
 {
-  uint16_t count=0;
+	uint16_t count=0;
 
-  //Serial.println("W5100 reset");
-  writeMR(1<<RST);
-  while (++count < 20) {
-    uint8_t mr = readMR();
-    //Serial.print("mr=");
-    //Serial.println(mr, HEX);
-    if (mr == 0) break;
-    delay(1);
-  }
+	//Serial.println("Wiznet soft reset");
+	// write to reset bit
+	writeMR(0x80);
+	// then wait for soft reset to complete
+	do {
+		uint8_t mr = readMR();
+		//Serial.print("mr=");
+		//Serial.println(mr, HEX);
+		if (mr == 0) return 1;
+		delay(1);
+	} while (++count < 20);
+	return 0;
 }
 
 uint8_t W5100Class::isW5100(void)
 {
-  chip = 51;
-  //Serial.println("w5100.cpp: detect W5100 chip");
-  reset();
-  writeMR(0x10);
-  if (readMR() != 0x10) return 0;
-  writeMR(0x12);
-  if (readMR() != 0x12) return 0;
-  writeMR(0x00);
-  if (readMR() != 0x00) return 0;
-  //Serial.println("chip is W5100");
-  return 1;
+	chip = 51;
+	//Serial.println("w5100.cpp: detect W5100 chip");
+	if (!softReset()) return 0;
+	writeMR(0x10);
+	if (readMR() != 0x10) return 0;
+	writeMR(0x12);
+	if (readMR() != 0x12) return 0;
+	writeMR(0x00);
+	if (readMR() != 0x00) return 0;
+	//Serial.println("chip is W5100");
+	return 1;
 }
 
 uint8_t W5100Class::isW5200(void)
 {
-  uint8_t mr;
-  chip = 52;
-  //Serial.println("w5100.cpp: detect W5200 chip");
-#ifdef W5200_RESET_PIN
-  pinMode(W5200_RESET_PIN, OUTPUT);
-  digitalWrite(W5200_RESET_PIN, LOW);
-  delay(1);
-  digitalWrite(W5200_RESET_PIN, HIGH);
-  delay(450);
-#endif
-  reset();
-  writeMR(0x08);
-  mr = readMR();
-  if (mr != 0x08) return 0;
-  writeMR(0x10);
-  mr = readMR();
-  if (mr != 0x10) return 0;
-  writeMR(0x00);
-  mr = readMR();
-  if (mr != 0x00) return 0;
-  //Serial.println("chip is W5200");
-  return 1;
+	chip = 52;
+	//Serial.println("w5100.cpp: detect W5200 chip");
+	if (!softReset()) return 0;
+	writeMR(0x08);
+	if (readMR() != 0x08) return 0;
+	writeMR(0x10);
+	if (readMR() != 0x10) return 0;
+	writeMR(0x00);
+	if (readMR() != 0x00) return 0;
+	int ver = readVERSIONR_W5200();
+	//Serial.print("version=");
+	//Serial.println(ver);
+	if (ver != 3) return 0;
+	//Serial.println("chip is W5200");
+	return 1;
 }
 
 uint8_t W5100Class::isW5500(void)
 {
-  uint8_t mr, count=0;
-
-  chip = 55;
-  //Serial.println("w5100.cpp: detect W5500 chip");
-  reset();
-  writeMR(0x08);
-  mr = readMR();
-  if (mr != 0x08) return 0;
-  writeMR(0x10);
-  mr = readMR();
-  if (mr != 0x10) return 0;
-  writeMR(0x00);
-  mr = readMR();
-  if (mr != 0x00) return 0;
-  writeMR(0x80);
-  while (1) {
-    if (readMR() == 0) break;
-    if (++count > 100) return 0;
-  }
-  //Serial.println("chip is W5500");
-  return 1;
+	chip = 55;
+	//Serial.println("w5100.cpp: detect W5500 chip");
+	if (!softReset()) return 0;
+	writeMR(0x08);
+	if (readMR() != 0x08) return 0;
+	writeMR(0x10);
+	if (readMR() != 0x10) return 0;
+	writeMR(0x00);
+	if (readMR() != 0x00) return 0;
+	int ver = readVERSIONR_W5500();
+	//Serial.print("version=");
+	//Serial.println(ver);
+	if (ver != 4) return 0;
+	//Serial.println("chip is W5500");
+	return 1;
 }
 
 
