@@ -1,5 +1,5 @@
-#include "w5100.h"
 #include "Ethernet.h"
+#include "w5100.h"
 #include "Dhcp.h"
 
 IPAddress EthernetClass::_dnsServerAddress;
@@ -73,6 +73,11 @@ void EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress g
 #endif
 	SPI.endTransaction();
 	_dnsServerAddress = dns;
+}
+
+void EthernetClass::init(uint8_t sspin)
+{
+	W5100.setSS(sspin);
 }
 
 int EthernetClass::maintain()

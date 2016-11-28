@@ -13,10 +13,12 @@
 #include <Arduino.h>
 #include <SPI.h>
 
-//#define SPI_ETHERNET_SETTINGS SPISettings(30000000, MSBFIRST, SPI_MODE0)
+// Safe for all chips
 #define SPI_ETHERNET_SETTINGS SPISettings(14000000, MSBFIRST, SPI_MODE0)
-//#define SPI_ETHERNET_SETTINGS SPISettings(8000000, MSBFIRST, SPI_MODE0)
-//#define SPI_ETHERNET_SETTINGS SPISettings(4000000, MSBFIRST, SPI_MODE0)
+
+// Safe for W5200 and W5500, but too fast for W5100
+// uncomment this if you know you'll never need W5100 support
+//#define SPI_ETHERNET_SETTINGS SPISettings(30000000, MSBFIRST, SPI_MODE0)
 
 #define MAX_SOCK_NUM 4
 
@@ -252,12 +254,11 @@ public:
 
 private:
   static uint8_t chip;
+  static uint8_t ss_pin;
   static uint8_t softReset(void);
   static uint8_t isW5100(void);
   static uint8_t isW5200(void);
   static uint8_t isW5500(void);
-
-  static const uint8_t  RST = 7; // Reset BIT
 
 public:
   static const int SOCKETS = 4;
@@ -271,34 +272,118 @@ public:
     if (chip == 55) return true;
     return false;
   }
+  static void setSS(uint8_t pin) { ss_pin = pin; }
 
 private:
-#if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
-  inline static void initSS()    { DDRB  |=  _BV(4); };
-  inline static void setSS()     { PORTB &= ~_BV(4); };
-  inline static void resetSS()   { PORTB |=  _BV(4); };
-#elif defined(__AVR_ATmega32U4__) && defined(CORE_TEENSY)
-  inline static void initSS()    { DDRB  |=  _BV(0); };
-  inline static void setSS()     { PORTB &= ~_BV(0); };
-  inline static void resetSS()   { PORTB |=  _BV(0); };
-#elif defined(__AVR_ATmega32U4__)
-  inline static void initSS()    { DDRB  |=  _BV(6); };
-  inline static void setSS()     { PORTB &= ~_BV(6); };
-  inline static void resetSS()   { PORTB |=  _BV(6); };
-#elif defined(__AVR_AT90USB1286__) || defined(__AVR_AT90USB646__) || defined(__AVR_AT90USB162__)
-  inline static void initSS()    { DDRB  |=  _BV(0); };
-  inline static void setSS()     { PORTB &= ~_BV(0); };
-  inline static void resetSS()   { PORTB |=  _BV(0); };
-#elif defined(__MK20DX128__) || defined(__MK20DX256__)
-  inline static void initSS()    { pinMode(10, OUTPUT); };
-  inline static void setSS()     { digitalWriteFast(10, LOW); };
-  inline static void resetSS()   { digitalWriteFast(10, HIGH); };
-#else
-  inline static void initSS()    { DDRB  |=  _BV(2); };
-  inline static void setSS()     { PORTB &= ~_BV(2); };
-  inline static void resetSS()   { PORTB |=  _BV(2); };
-#endif
+#if defined(__AVR__)
+	static volatile uint8_t *ss_pin_reg;
+	static uint8_t ss_pin_mask;
+	inline static void initSS() {
+		ss_pin_reg = portOutputRegister(digitalPinToPort(ss_pin));
+		ss_pin_mask = digitalPinToBitMask(ss_pin);
+		pinMode(ss_pin, OUTPUT);
+	}
+	inline static void setSS() {
+		*(ss_pin_reg) &= ~ss_pin_mask;
+	}
+	inline static void resetSS() {
+		*(ss_pin_reg) |= ss_pin_mask;
+	}
+#elif defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK66FX1M0__) || defined(__MK64FX512__)
+	static volatile uint8_t *ss_pin_reg;
+	inline static void initSS() {
+		ss_pin_reg = portOutputRegister(ss_pin);
+		pinMode(ss_pin, OUTPUT);
+	}
+	inline static void setSS() {
+		*(ss_pin_reg+256) = 1;
+	}
+	inline static void resetSS() {
+		*(ss_pin_reg+128) = 1;
+	}
+#elif defined(__MKL26Z64__)
+	static volatile uint8_t *ss_pin_reg;
+	static uint8_t ss_pin_mask;
+	inline static void initSS() {
+		ss_pin_reg = portOutputRegister(digitalPinToPort(ss_pin));
+		ss_pin_mask = digitalPinToBitMask(ss_pin);
+		pinMode(ss_pin, OUTPUT);
+	}
+	inline static void setSS() {
+		*(ss_pin_reg+8) = ss_pin_mask;
+	}
+	inline static void resetSS() {
+		*(ss_pin_reg+4) = ss_pin_mask;
+	}
+#elif defined(__SAM3X8E__) || defined(__SAM3A8C__) || defined(__SAM3A4C__)
+	static volatile uint32_t *ss_pin_reg;
+	static uint32_t ss_pin_mask;
+	inline static void initSS() {
+		ss_pin_reg = &(digitalPinToPort(ss_pin)->PIO_PER);
+		ss_pin_mask = digitalPinToBitMask(ss_pin);
+		pinMode(ss_pin, OUTPUT);
+	}
+	inline static void setSS() {
+		*(ss_pin_reg+13) = ss_pin_mask;
+	}
+	inline static void resetSS() {
+		*(ss_pin_reg+12) = ss_pin_mask;
+	}
+#elif defined(__PIC32MX__)
+	static volatile uint32_t *ss_pin_reg;
+	static uint32_t ss_pin_mask;
+	inline static void initSS() {
+		ss_pin_reg = portModeRegister(digitalPinToPort(ss_pin));
+		ss_pin_mask = digitalPinToBitMask(ss_pin);
+		pinMode(ss_pin, OUTPUT);
+	}
+	inline static void setSS() {
+		*(ss_pin_reg+8+1) = ss_pin_mask;
+	}
+	inline static void resetSS() {
+		*(ss_pin_reg+8+2) = ss_pin_mask;
+	}
 
+#elif defined(ARDUINO_ARCH_ESP8266)
+	static volatile uint32_t *ss_pin_reg;
+	static uint32_t ss_pin_mask;
+	inline static void initSS() {
+		ss_pin_reg = (volatile uint32_t*)GPO;
+		ss_pin_mask = 1 << ss_pin;
+		pinMode(ss_pin, OUTPUT);
+	}
+	inline static void setSS() {
+		GPOC = ss_pin_mask;
+	}
+	inline static void resetSS() {
+		GPOS = ss_pin_mask;
+	}
+
+#elif defined(__SAMD21G18A__)
+	static volatile uint32_t *ss_pin_reg;
+	static uint32_t ss_pin_mask;
+	inline static void initSS() {
+		ss_pin_reg = portModeRegister(digitalPinToPort(ss_pin);
+		ss_pin_mask = digitalPinToBitMask(ss_pin);
+		pinMode(ss_pin, OUTPUT);
+	}
+	inline static void setSS() {
+		*(ss_pin_reg+5) = ss_pin_mask;
+	}
+	inline static void resetSS() {
+		*(ss_pin_reg+6) = ss_pin_mask;
+	}
+#else
+	inline static void initSS() {
+		pinMode(ss_pin, OUTPUT);
+	}
+	inline static void setSS() {
+		digitalWrite(ss_pin, LOW);
+	}
+	inline static void resetSS() {
+		digitalWrite(ss_pin, HIGH);
+	}
+#endif
 };
 
 extern W5100Class W5100;
