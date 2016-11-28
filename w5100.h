@@ -10,7 +10,7 @@
 #ifndef	W5100_H_INCLUDED
 #define	W5100_H_INCLUDED
 
-#include <avr/pgmspace.h>
+#include <Arduino.h>
 #include <SPI.h>
 
 //#define SPI_ETHERNET_SETTINGS SPISettings(30000000, MSBFIRST, SPI_MODE0)
@@ -302,5 +302,19 @@ private:
 extern W5100Class W5100;
 
 
+
+#endif
+
+#ifndef UTIL_H
+#define UTIL_H
+
+#define htons(x) ( (((x)<<8)&0xFF00) | (((x)>>8)&0xFF) )
+#define ntohs(x) htons(x)
+
+#define htonl(x) ( ((x)<<24 & 0xFF000000UL) | \
+                   ((x)<< 8 & 0x00FF0000UL) | \
+                   ((x)>> 8 & 0x0000FF00UL) | \
+                   ((x)>>24 & 0x000000FFUL) )
+#define ntohl(x) htonl(x)
 
 #endif

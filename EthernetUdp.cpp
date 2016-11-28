@@ -1,6 +1,6 @@
 /*
  *  Udp.cpp: Library to send/receive UDP packets with the Arduino ethernet shield.
- *  This version only offers minimal wrapping of socket.c/socket.h
+ *  This version only offers minimal wrapping of socket.cpp
  *  Drop Udp.h/.cpp into the Ethernet library directory at hardware/libraries/Ethernet/ 
  *
  * MIT License:
@@ -26,18 +26,16 @@
  * bjoern@cs.stanford.edu 12/30/2008
  */
 
-#include "w5100.h"
-#include "socket.h"
 #include "Ethernet.h"
-#include "Udp.h"
 #include "Dns.h"
+#include "w5100.h"
 
 
 /* Start EthernetUDP socket, listening at local port PORT */
 uint8_t EthernetUDP::begin(uint16_t port)
 {
-	if (sockindex < MAX_SOCK_NUM) socketClose(sockindex);
-	sockindex = socketBegin(SnMR::UDP, port);
+	if (sockindex < MAX_SOCK_NUM) Ethernet.socketClose(sockindex);
+	sockindex = Ethernet.socketBegin(SnMR::UDP, port);
 	if (sockindex >= MAX_SOCK_NUM) return 0;
 	_port = port;
 	_remaining = 0;
@@ -55,7 +53,7 @@ int EthernetUDP::available()
 void EthernetUDP::stop()
 {
 	if (sockindex < MAX_SOCK_NUM) {
-		socketClose(sockindex);
+		Ethernet.socketClose(sockindex);
 		sockindex = MAX_SOCK_NUM;
 	}
 }
@@ -77,12 +75,12 @@ int EthernetUDP::beginPacket(IPAddress ip, uint16_t port)
 {
 	_offset = 0;
 	//Serial.printf("UDP beginPacket\n");
-	return socketStartUDP(sockindex, rawIPAddress(ip), port);
+	return Ethernet.socketStartUDP(sockindex, rawIPAddress(ip), port);
 }
 
 int EthernetUDP::endPacket()
 {
-	return socketSendUDP(sockindex);
+	return Ethernet.socketSendUDP(sockindex);
 }
 
 size_t EthernetUDP::write(uint8_t byte)
@@ -93,7 +91,7 @@ size_t EthernetUDP::write(uint8_t byte)
 size_t EthernetUDP::write(const uint8_t *buffer, size_t size)
 {
 	//Serial.printf("UDP write %d\n", size);
-	uint16_t bytes_written = socketBufferData(sockindex, _offset, buffer, size);
+	uint16_t bytes_written = Ethernet.socketBufferData(sockindex, _offset, buffer, size);
 	_offset += bytes_written;
 	return bytes_written;
 }
@@ -108,12 +106,12 @@ int EthernetUDP::parsePacket()
 		read();
 	}
 
-	if (socketRecvAvailable(sockindex) > 0) {
+	if (Ethernet.socketRecvAvailable(sockindex) > 0) {
 		//HACK - hand-parse the UDP packet using TCP recv method
 		uint8_t tmpBuf[8];
 		int ret=0; 
 		//read 8 header bytes and get IP and port from it
-		ret = socketRecv(sockindex, tmpBuf, 8);
+		ret = Ethernet.socketRecv(sockindex, tmpBuf, 8);
 		if (ret > 0) {
 			_remoteIP = tmpBuf;
 			_remotePort = tmpBuf[4];
@@ -134,7 +132,7 @@ int EthernetUDP::read()
 {
 	uint8_t byte;
 
-	if ((_remaining > 0) && (socketRecv(sockindex, &byte, 1) > 0)) {
+	if ((_remaining > 0) && (Ethernet.socketRecv(sockindex, &byte, 1) > 0)) {
 		// We read things without any problems
 		_remaining--;
 		return byte;
@@ -150,11 +148,11 @@ int EthernetUDP::read(unsigned char* buffer, size_t len)
 		int got;
 		if (_remaining <= len) {
 			// data should fit in the buffer
-			got = socketRecv(sockindex, buffer, _remaining);
+			got = Ethernet.socketRecv(sockindex, buffer, _remaining);
 		} else {
 			// too much data for the buffer, 
 			// grab as much as will fit
-			got = socketRecv(sockindex, buffer, len);
+			got = Ethernet.socketRecv(sockindex, buffer, len);
 		}
 		if (got > 0) {
 			_remaining -= got;
@@ -172,7 +170,7 @@ int EthernetUDP::peek()
 	// If the user hasn't called parsePacket yet then return nothing otherwise they
 	// may get the UDP header
 	if (sockindex >= MAX_SOCK_NUM || _remaining == 0) return -1;
-	return socketPeek(sockindex);
+	return Ethernet.socketPeek(sockindex);
 }
 
 void EthernetUDP::flush()
@@ -183,8 +181,8 @@ void EthernetUDP::flush()
 /* Start EthernetUDP socket, listening at local port PORT */
 uint8_t EthernetUDP::beginMulticast(IPAddress ip, uint16_t port)
 {
-	if (sockindex < MAX_SOCK_NUM) socketClose(sockindex);
-	sockindex = socketBegin(SnMR::UDP | SnMR::MULTI, port);
+	if (sockindex < MAX_SOCK_NUM) Ethernet.socketClose(sockindex);
+	sockindex = Ethernet.socketBegin(SnMR::UDP | SnMR::MULTI, port);
 	if (sockindex >= MAX_SOCK_NUM) return 0;
 	_port = port;
 	_remaining = 0;

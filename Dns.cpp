@@ -2,14 +2,9 @@
 // (c) Copyright 2009-2010 MCQN Ltd.
 // Released under Apache License, version 2.0
 
-#include "w5100.h"
-#include "EthernetUdp.h"
-#include "util.h"
-
+#include "Ethernet.h"
 #include "Dns.h"
-#include <string.h>
-//#include <stdlib.h>
-#include "Arduino.h"
+#include "w5100.h"
 
 
 #define SOCKET_NONE	255
