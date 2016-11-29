@@ -363,7 +363,7 @@ private:
 	static volatile uint32_t *ss_pin_reg;
 	static uint32_t ss_pin_mask;
 	inline static void initSS() {
-		ss_pin_reg = portModeRegister(digitalPinToPort(ss_pin);
+		ss_pin_reg = portModeRegister(digitalPinToPort(ss_pin));
 		ss_pin_mask = digitalPinToBitMask(ss_pin);
 		pinMode(ss_pin, OUTPUT);
 	}
