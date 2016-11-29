@@ -1,7 +1,7 @@
 #include "Ethernet.h"
 #include "w5100.h"
 
-#if ARDUINO >= 156 || TEENSYDUINO >= 120
+#if ARDUINO >= 156 && !defined(ARDUINO_ARCH_PIC32)
 extern void yield(void);
 #else
 #define yield()
