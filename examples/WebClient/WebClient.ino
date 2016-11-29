@@ -35,7 +35,7 @@ IPAddress myDns(192, 168, 0, 1);
 // that you want to connect to (port 80 is default for HTTP):
 EthernetClient client;
 
-unsigned long beginMillis, endMillis;
+unsigned long beginMicros, endMicros;
 unsigned long byteCount=0;
 
 void setup() {
@@ -74,29 +74,32 @@ void setup() {
     // if you didn't get a connection to the server:
     Serial.println("connection failed");
   }
-  beginMillis = millis();
+  beginMicros = micros();
 }
 
 void loop() {
   // if there are incoming bytes available
   // from the server, read them and print them:
-  if (client.available()) {
-    char c = client.read();
-    Serial.print(c);
-    byteCount = byteCount + 1;
+  int len = client.available();
+  if (len > 0) {
+    byte buffer[80];
+    if (len > 80) len = 80;
+    client.read(buffer, len);
+    Serial.write(buffer, len); // show in the serial monitor (slows some boards)
+    byteCount = byteCount + len;
   }
 
   // if the server's disconnected, stop the client:
   if (!client.connected()) {
-    endMillis = millis();
+    endMicros = micros();
     Serial.println();
     Serial.println("disconnecting.");
     client.stop();
     Serial.print("Received ");
     Serial.print(byteCount);
     Serial.print(" bytes in ");
-    float seconds = (float)(endMillis - beginMillis) / 1000.0;
-    Serial.print(seconds);
+    float seconds = (float)(endMicros - beginMicros) / 1000000.0;
+    Serial.print(seconds, 4);
     float rate = (float)byteCount / seconds;
     Serial.print(", rate = ");
     Serial.print(rate);
