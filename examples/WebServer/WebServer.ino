@@ -6,7 +6,6 @@
 
  Circuit:
  * Ethernet shield attached to pins 10, 11, 12, 13
-   if using W5200 (Wiz820io), attach nRESET to pin 9
  * Analog inputs attached to pins A0 through A5 (optional)
 
  created 18 Dec 2009

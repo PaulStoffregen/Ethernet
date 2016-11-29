@@ -16,7 +16,6 @@
  Circuit:
  * Analog sensor attached to analog in 0
  * Ethernet shield attached to pins 10, 11, 12, 13
-   if using W5200 (Wiz820io), attach nRESET to pin 9
 
  created 15 March 2010
  modified 9 Apr 2012
