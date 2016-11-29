@@ -17,6 +17,7 @@
 #endif
 
 //#define W5500_4K_BUFFERS
+//#define W5200_4K_BUFFERS
 
 // If the core library defines a SS pin, use it as the
 // default.  Otherwise, default the default to pin 10.
@@ -94,8 +95,13 @@ uint8_t W5100Class::init(void)
 	// where it won't recover, unless given a reset pulse.
 	if (isW5200()) {
 		CH_BASE = 0x4000;
+		#ifdef W5200_4K_BUFFERS
 		SSIZE = 4096;
 		SMASK = 0x0FFF;
+		#else
+		SSIZE = 2048;    // 2K buffers
+		SMASK = 0x07FF;
+		#endif
 		TXBUF_BASE = 0x8000;
 		RXBUF_BASE = 0xC000;
 		for (i=0; i<MAX_SOCK_NUM; i++) {
