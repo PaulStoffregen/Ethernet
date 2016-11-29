@@ -26,7 +26,11 @@ int EthernetClient::connect(IPAddress ip, uint16_t port)
 		}
 		sockindex = MAX_SOCK_NUM;
 	}
+#ifdef ESP8266
+	if (ip == IPAddress((uint32_t)0) || ip == IPAddress(0xFFFFFFFFul)) return 0;
+#else
 	if (ip == IPAddress(0ul) || ip == IPAddress(0xFFFFFFFFul)) return 0;
+#endif
 	sockindex = Ethernet.socketBegin(SnMR::TCP, 0);
 	if (sockindex >= MAX_SOCK_NUM) return 0;
 	Ethernet.socketConnect(sockindex, rawIPAddress(ip), port);
