@@ -233,7 +233,7 @@ int EthernetClass::socketRecv(uint8_t s, uint8_t *buf, int16_t len)
 		state[s].RX_RD = ptr;
 		state[s].RX_RSR -= ret;
 		uint16_t inc = state[s].RX_inc + ret;
-		if (inc >= 80 || state[s].RX_RSR == 0) {
+		if (inc >= 250 || state[s].RX_RSR == 0) {
 			state[s].RX_inc = 0;
 			W5100.writeSnRX_RD(s, ptr);
 			W5100.execCmdSn(s, Sock_RECV);
