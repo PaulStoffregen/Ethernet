@@ -14,7 +14,7 @@ typedef struct {
 	uint16_t RX_RSR; // Number of bytes received
 	uint16_t RX_RD;  // Address to read
 	uint16_t TX_FSR; // Free space ready for transmit
-	uint8_t  RX_inc; // how much have we advanced RX_RD
+	uint16_t RX_inc; // how much have we advanced RX_RD
 } socketstate_t;
 
 static socketstate_t state[MAX_SOCK_NUM];
@@ -78,6 +78,8 @@ makesocket:
 	EthernetServer::server_port[s] = 0;
 	delayMicroseconds(250); // TODO: is this needed??
 	W5100.writeSnMR(s, protocol);
+	//W5100.writeSnMSSR(s, 1360); // 3 packets fit into 4K buffer
+	W5100.writeSnMSSR(s, 1024); // 4 packets fit into 4K buffer
 	W5100.writeSnIR(s, 0xFF);
 	if (port > 0) {
 		W5100.writeSnPORT(s, port);
@@ -233,7 +235,7 @@ int EthernetClass::socketRecv(uint8_t s, uint8_t *buf, int16_t len)
 		state[s].RX_RD = ptr;
 		state[s].RX_RSR -= ret;
 		uint16_t inc = state[s].RX_inc + ret;
-		if (inc >= 250 || state[s].RX_RSR == 0) {
+		if (inc >= 500 || state[s].RX_RSR == 0) {
 			state[s].RX_inc = 0;
 			W5100.writeSnRX_RD(s, ptr);
 			W5100.execCmdSn(s, Sock_RECV);

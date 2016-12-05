@@ -16,8 +16,8 @@
 #endif
 #endif
 
-//#define W5500_4K_BUFFERS
-//#define W5200_4K_BUFFERS
+#define W5500_4K_BUFFERS
+#define W5200_4K_BUFFERS
 
 // If the core library defines a SS pin, use it as the
 // default.  Otherwise, default the default to pin 10.

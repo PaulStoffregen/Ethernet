@@ -31,7 +31,7 @@ int EthernetClient::connect(IPAddress ip, uint16_t port)
 #else
 	if (ip == IPAddress(0ul) || ip == IPAddress(0xFFFFFFFFul)) return 0;
 #endif
-	sockindex = Ethernet.socketBegin(SnMR::TCP, 0);
+	sockindex = Ethernet.socketBegin(SnMR::TCP | SnMR::ND, 0);
 	if (sockindex >= MAX_SOCK_NUM) return 0;
 	Ethernet.socketConnect(sockindex, rawIPAddress(ip), port);
 	while (1) {
