@@ -96,6 +96,71 @@ makesocket:
 	return s;
 }
 
+// multicast version to set fields before open  thd 
+uint8_t EthernetClass::socketBeginMulticast(uint8_t protocol, IPAddress ip, uint16_t port)
+{
+	uint8_t s, status[MAX_SOCK_NUM];
+
+	//Serial.printf("W5000socket begin, protocol=%d, port=%d\n", protocol, port);
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	// look at all the hardware sockets, use any that are closed (unused)
+	for (s=0; s < MAX_SOCK_NUM; s++) {
+		status[s] = W5100.readSnSR(s);
+		if (status[s] == SnSR::CLOSED) goto makesocket;
+	}
+	//Serial.printf("W5000socket step2\n");
+	// as a last resort, forcibly close any already closing
+	for (s=0; s < MAX_SOCK_NUM; s++) {
+		uint8_t stat = status[s];
+		if (stat == SnSR::LAST_ACK) goto closemakesocket;
+		if (stat == SnSR::TIME_WAIT) goto closemakesocket;
+		if (stat == SnSR::FIN_WAIT) goto closemakesocket;
+		if (stat == SnSR::CLOSING) goto closemakesocket;
+	}
+#if 0
+	Serial.printf("W5000socket step3\n");
+	// next, use any that are effectively closed
+	for (s=0; s < MAX_SOCK_NUM; s++) {
+		uint8_t stat = status[s];
+		// TODO: this also needs to check if no more data
+		if (stat == SnSR::CLOSE_WAIT) goto closemakesocket;
+	}
+#endif
+	SPI.endTransaction();
+	return MAX_SOCK_NUM; // all sockets are in use
+closemakesocket:
+	//Serial.printf("W5000socket close\n");
+	W5100.execCmdSn(s, Sock_CLOSE);
+makesocket:
+	//Serial.printf("W5000socket %d\n", s);
+	EthernetServer::server_port[s] = 0;
+	delayMicroseconds(250); // TODO: is this needed??
+	W5100.writeSnMR(s, protocol);
+	W5100.writeSnIR(s, 0xFF);
+	if (port > 0) {
+		W5100.writeSnPORT(s, port);
+	} else {
+		// if don't set the source port, set local_port number.
+		if (++local_port < 49152) local_port = 49152;
+		W5100.writeSnPORT(s, local_port);
+	}
+	// Calculate MAC address from Multicast IP Address
+    	byte mac[] = {  0x01, 0x00, 0x5E, 0x00, 0x00, 0x00 };
+    	mac[3] = ip[1] & 0x7F;
+    	mac[4] = ip[2];
+    	mac[5] = ip[3];
+    	W5100.writeSnDIPR(s, ip.raw_address());   //239.255.0.1
+    	W5100.writeSnDPORT(s, port);
+    	W5100.writeSnDHAR(s, mac);
+	W5100.execCmdSn(s, Sock_OPEN);
+	state[s].RX_RSR = 0;
+	state[s].RX_RD  = W5100.readSnRX_RD(s); // always zero?
+	state[s].RX_inc = 0;
+	state[s].TX_FSR = 0;
+	//Serial.printf("W5000socket prot=%d, RX_RD=%d\n", W5100.readSnMR(s), state[s].RX_RD);
+	SPI.endTransaction();
+	return s;
+}
 // Return the socket's status
 //
 uint8_t EthernetClass::socketStatus(uint8_t s)
