@@ -182,18 +182,10 @@ void EthernetUDP::flush()
 uint8_t EthernetUDP::beginMulticast(IPAddress ip, uint16_t port)
 {
 	if (sockindex < MAX_SOCK_NUM) Ethernet.socketClose(sockindex);
-	sockindex = Ethernet.socketBegin(SnMR::UDP | SnMR::MULTI, port);
+	sockindex = Ethernet.socketBeginMulticast(SnMR::UDP | SnMR::MULTI, ip, port);
 	if (sockindex >= MAX_SOCK_NUM) return 0;
 	_port = port;
 	_remaining = 0;
-	// Calculate MAC address from Multicast IP Address
-	byte mac[] = {  0x01, 0x00, 0x5E, 0x00, 0x00, 0x00 };
-	mac[3] = ip[1] & 0x7F;
-	mac[4] = ip[2];
-	mac[5] = ip[3];
-	W5100.writeSnDIPR(sockindex, rawIPAddress(ip));   //239.255.0.1
-	W5100.writeSnDPORT(sockindex, port);
-	W5100.writeSnDHAR(sockindex, mac);
 	return 1;
 }
 
