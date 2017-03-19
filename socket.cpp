@@ -205,7 +205,13 @@ void EthernetClass::socketConnect(uint8_t s, uint8_t * addr, uint16_t port)
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
 	W5100.writeSnDIPR(s, addr);
 	W5100.writeSnDPORT(s, port);
+	if (W5100.hasARPSubnetMaskErrata()) {
+		W5100.writeSUBR(W5100.getSubnetMaskPtr());
+	}
 	W5100.execCmdSn(s, Sock_CONNECT);
+	// If hasARPSubnetMaskErrata, zeroing the subnet mask here, as Wiznet's
+	// errata suggests, seems to prevent establishing TCP connections.  It
+	// seems to be needed a while longer to successfully connect.
 	SPI.endTransaction();
 }
 
@@ -460,13 +466,25 @@ int EthernetClass::socketStartUDP(uint8_t s, uint8_t* addr, uint16_t port)
 
 int EthernetClass::socketSendUDP(uint8_t s)
 {
+	bool errata = W5100.hasARPSubnetMaskErrata();
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	if (errata) {
+		W5100.writeSUBR(W5100.getSubnetMaskPtr());
+	}
 	W5100.execCmdSn(s, Sock_SEND);
+	// If hasARPSubnetMaskErrata, zeroing the subnet mask here, as Wiznet's
+	// errata suggests, seems to prevent sending UDP packets.
 
 	/* +2008.01 bj */
-	while ( (W5100.readSnIR(s) & SnIR::SEND_OK) != SnIR::SEND_OK ) {
-		if (W5100.readSnIR(s) & SnIR::TIMEOUT) {
+	while (1) {
+		uint8_t ir = W5100.readSnIR(s);
+		if (ir & SnIR::SEND_OK) break;
+		if (ir & SnIR::TIMEOUT) {
 			/* +2008.01 [bj]: clear interrupt */
+			if (errata) {
+				uint8_t ipzero[4] = {0, 0, 0, 0};
+				W5100.writeSUBR(ipzero);
+			}
 			W5100.writeSnIR(s, (SnIR::SEND_OK|SnIR::TIMEOUT));
 			SPI.endTransaction();
 			//Serial.printf("sendUDP timeout\n");
@@ -478,6 +496,10 @@ int EthernetClass::socketSendUDP(uint8_t s)
 	}
 
 	/* +2008.01 bj */
+	if (errata) {
+		uint8_t ipzero[4] = {0, 0, 0, 0};
+		W5100.writeSUBR(ipzero);
+	}
 	W5100.writeSnIR(s, SnIR::SEND_OK);
 	SPI.endTransaction();
 

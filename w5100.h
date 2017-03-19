@@ -98,8 +98,18 @@ public:
   inline void setGatewayIp(const uint8_t * addr) { writeGAR(addr); }
   inline void getGatewayIp(uint8_t * addr) { readGAR(addr); }
 
-  inline void setSubnetMask(const uint8_t * addr) { writeSUBR(addr); }
-  inline void getSubnetMask(uint8_t * addr) { readSUBR(addr); }
+  inline void setSubnetMask(const uint8_t * addr) {
+     memcpy(subnetMask, addr, 4);
+     if (hasARPSubnetMaskErrata()) {
+       uint8_t ipzero[4] = {0, 0, 0, 0};
+       writeSUBR(ipzero);
+       //writeSUBR(addr);
+     } else {
+       writeSUBR(addr);
+     }
+  }
+  inline void getSubnetMask(uint8_t * addr) { memcpy(addr, subnetMask, 4); }
+  inline const uint8_t *getSubnetMaskPtr(void) { return subnetMask; }
 
   inline void setMACAddress(const uint8_t * addr) { writeSHAR(addr); }
   inline void getMACAddress(uint8_t * addr) { readSHAR(addr); }
@@ -255,6 +265,7 @@ public:
 private:
   static uint8_t chip;
   static uint8_t ss_pin;
+  static uint8_t subnetMask[4]; // for W5100 & W5200 errata workaround
   static uint8_t softReset(void);
   static uint8_t isW5100(void);
   static uint8_t isW5200(void);
@@ -270,6 +281,10 @@ public:
   static uint16_t RBASE[SOCKETS]; // Rx buffer base address
   static bool hasOffsetAddressMapping(void) {
     if (chip == 55) return true;
+    return false;
+  }
+  static bool hasARPSubnetMaskErrata(void) {
+    if (chip <= 52) return true;
     return false;
   }
   static void setSS(uint8_t pin) { ss_pin = pin; }

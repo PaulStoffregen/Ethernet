@@ -34,13 +34,29 @@ int EthernetClient::connect(IPAddress ip, uint16_t port)
 	sockindex = Ethernet.socketBegin(SnMR::TCP, 0);
 	if (sockindex >= MAX_SOCK_NUM) return 0;
 	Ethernet.socketConnect(sockindex, rawIPAddress(ip), port);
+	uint8_t ret;
 	while (1) {
 		uint8_t stat = Ethernet.socketStatus(sockindex);
-		if (stat == SnSR::ESTABLISHED) return 1;
-		if (stat == SnSR::CLOSE_WAIT) return 1;
-		if (stat == SnSR::CLOSED) return 0;
+		if (stat == SnSR::ESTABLISHED || stat == SnSR::CLOSE_WAIT) {
+			ret = 1;
+			break;
+		}
+		if (stat == SnSR::CLOSED) {
+			ret = 0;
+			break;
+		}
 		delay(1);
 	}
+	if (W5100.hasARPSubnetMaskErrata()) {
+		// Wiznet's errata says to set this back to zero immediately
+		// after Sn_CR reads zero to confirm the Sn_CR_SEND command.
+		// But doing so seems to prevent establishing any connections.
+		// This seems to be the earliest point to zero the subnet
+		// mask for ARP which actually allows TCP clients to work.
+		uint8_t ipzero[4] = {0, 0, 0, 0};
+		W5100.writeSUBR(ipzero);
+	}
+	return ret;
 }
 
 size_t EthernetClient::write(uint8_t b)

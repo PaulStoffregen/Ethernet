@@ -37,6 +37,7 @@ uint16_t W5100Class::SSIZE;
 uint16_t W5100Class::SMASK;
 uint8_t  W5100Class::chip;
 uint8_t  W5100Class::ss_pin = SS_PIN_DEFAULT;
+uint8_t  W5100Class::subnetMask[4] = {0, 0, 0, 0};
 W5100Class W5100;
 
 // pointers and bitmasks for optimized SS pin
