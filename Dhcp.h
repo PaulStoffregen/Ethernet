@@ -11,6 +11,8 @@
 #define	STATE_DHCP_LEASED	3
 #define	STATE_DHCP_REREQUEST	4
 #define	STATE_DHCP_RELEASE	5
+#define	STATE_DHCP_CONNECTION_FAILED	6
+#define	STATE_DHCP_TIMEOUT	7
 
 #define DHCP_FLAGSBROADCAST	0x8000
 
@@ -50,6 +52,8 @@
 #define DHCP_CHECK_RENEW_OK     (2)
 #define DHCP_CHECK_REBIND_FAIL  (3)
 #define DHCP_CHECK_REBIND_OK    (4)
+#define DHCP_CHECK_RENEW_STARTED   (1)
+#define DHCP_CHECK_REBIND_STARTED  (2)
 
 enum
 {
@@ -120,8 +124,8 @@ enum
 
 typedef struct _RIP_MSG_FIXED
 {
-	uint8_t  op; 
-	uint8_t  htype; 
+	uint8_t  op;
+	uint8_t  htype;
 	uint8_t  hlen;
 	uint8_t  hops;
 	uint32_t xid;
