@@ -236,14 +236,12 @@ static uint16_t getSnRX_RSR(uint8_t s)
         while (1) {
                 val = W5100.readSnRX_RSR(s);
                 if (val == prev) {
-			state[s].RX_RSR = val;
 			return val;
 		}
                 prev = val;
         }
 #else
 	uint16_t val = W5100.readSnRX_RSR(s);
-	state[s].RX_RSR = val;
 	return val;
 #endif
 }
@@ -276,7 +274,10 @@ int EthernetClass::socketRecv(uint8_t s, uint8_t *buf, int16_t len)
 	int ret = state[s].RX_RSR;
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
 	if (ret < len) {
-		ret = getSnRX_RSR(s);
+		uint16_t rsr = getSnRX_RSR(s);
+		ret = rsr - state[s].RX_inc;
+		state[s].RX_RSR = ret;
+		//Serial.printf("Sock_RECV, RX_RSR=%d, RX_inc=%d\n", ret, state[s].RX_inc);
 	}
 	if (ret == 0) {
 		// No data available.
@@ -302,12 +303,14 @@ int EthernetClass::socketRecv(uint8_t s, uint8_t *buf, int16_t len)
 			state[s].RX_inc = 0;
 			W5100.writeSnRX_RD(s, ptr);
 			W5100.execCmdSn(s, Sock_RECV);
-			//Serial.printf("Sock_RECV cmd, RX_RD=%d\n", state[s].RX_RD);
+			//Serial.printf("Sock_RECV cmd, RX_RD=%d, RX_RSR=%d\n",
+			//  state[s].RX_RD, state[s].RX_RSR);
 		} else {
 			state[s].RX_inc = inc;
 		}
 	}
 	SPI.endTransaction();
+	//Serial.printf("socketRecv, ret=%d\n", ret);
 	return ret;
 }
 
@@ -316,10 +319,12 @@ uint16_t EthernetClass::socketRecvAvailable(uint8_t s)
 	uint16_t ret = state[s].RX_RSR;
 	if (ret == 0) {
 		SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-		ret = getSnRX_RSR(s);
+		uint16_t rsr = getSnRX_RSR(s);
 		SPI.endTransaction();
+		ret = rsr - state[s].RX_inc;
+		state[s].RX_RSR = ret;
+		//Serial.printf("sockRecvAvailable s=%d, RX_RSR=%d\n", s, ret);
 	}
-	//Serial.printf("sock.recvAvailable s=%d, num=%d\n", s, ret);
 	return ret;
 }
 
