@@ -21,7 +21,9 @@
 
 // If the core library defines a SS pin, use it as the
 // default.  Otherwise, default the default to pin 10.
-#if defined(PIN_SPI_SS)
+#if defined(__AVR__)
+#define SS_PIN_DEFAULT  10
+#elif defined(PIN_SPI_SS)
 #define SS_PIN_DEFAULT  PIN_SPI_SS
 #elif defined(CORE_SS0_PIN)
 #define SS_PIN_DEFAULT  CORE_SS0_PIN
