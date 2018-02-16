@@ -97,12 +97,17 @@ void EthernetClient::stop()
 
 	// wait up to a second for the connection to close
 	do {
-		if (Ethernet.socketStatus(sockindex) == SnSR::CLOSED) return; // exit the loop
+		if (Ethernet.socketStatus(sockindex) == SnSR::CLOSED)
+        {
+            sockindex = MAX_SOCK_NUM;
+            return; // exit the loop
+        }
 		delay(1);
 	} while (millis() - start < 1000);
 
 	// if it hasn't closed, close it forcefully
 	Ethernet.socketClose(sockindex);
+    sockindex = MAX_SOCK_NUM;
 }
 
 uint8_t EthernetClient::connected()
