@@ -39,6 +39,7 @@ public:
 	static IPAddress subnetMask();
 	static IPAddress gatewayIP();
 	static IPAddress dnsServerIP() { return _dnsServerAddress; }
+	static uint8_t getLINK();
 
 	friend class EthernetClient;
 	friend class EthernetServer;

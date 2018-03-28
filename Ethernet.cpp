@@ -137,6 +137,14 @@ IPAddress EthernetClass::gatewayIP()
 
 
 
+uint8_t EthernetClass::getLINK()
+{
+	uint8_t pstatus;
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	pstatus = W5100.getPHY();
+	SPI.endTransaction();
+	return pstatus;
+}
 
 
 
