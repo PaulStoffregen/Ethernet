@@ -139,9 +139,10 @@ IPAddress EthernetClass::gatewayIP()
 
 uint8_t EthernetClass::getLINK()
 {
-	uint8_t pstatus;
+	uint8_t pstatus, inbound;
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	pstatus = W5100.getPHY();
+	inbound = W5100.getPHY();
+	pstatus = (inbound & 0b00100000) >> 5;  //mask and shift !!
 	SPI.endTransaction();
 	return pstatus;
 }
