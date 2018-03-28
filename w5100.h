@@ -112,6 +112,7 @@ public:
 
   static void execCmdSn(SOCKET s, SockCMD _cmd);
 
+  static uint8_t getPHY() { return readPHY(); }
 
   // W5100 Registers
   // ---------------
@@ -173,6 +174,7 @@ public:
   __GP_REGISTER_N(UIPR,   0x002A, 4); // Unreachable IP address in UDP mode (W5100 only)
   __GP_REGISTER16(UPORT,  0x002E);    // Unreachable Port address in UDP mode (W5100 only)
   __GP_REGISTER8 (VERSIONR_W5200,0x001F);   // Chip Version Register (W5200 only)
+  __GP_REGISTER8 (PHY, 0x0035); // physical status reigster
   __GP_REGISTER8 (VERSIONR_W5500,0x0039);   // Chip Version Register (W5500 only)
 
 #undef __GP_REGISTER8
