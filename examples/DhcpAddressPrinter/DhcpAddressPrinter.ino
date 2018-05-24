@@ -26,6 +26,15 @@ byte mac[] = {
 };
 
 void setup() {
+  // uncomment one of these if not using pin 10 for CS
+  //Ethernet.init(0);   // Teensy 2.0
+  //Ethernet.init(20);  // Teensy++ 2.0
+  //Ethernet.init(15);  // ESP8266 with Adafruit Featherwing Ethernet
+  //Ethernet.init(32);  // ESP32 with Adafruit Featherwing Ethernet
+  //Ethernet.init(PB4); // STM32 with Adafruit Featherwing Ethernet
+  //Ethernet.init(11);  // Adafruit nRF52 with Featherwing Ethernet
+  //Ethernet.init(10);  // Most Arduino shields use pin 10
+
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
   // this check is only needed on the Leonardo:

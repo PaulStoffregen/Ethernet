@@ -49,6 +49,15 @@ String tweet = "";                  // string to hold the tweet
 boolean readingTweet = false;       // if you're currently reading the tweet
 
 void setup() {
+  // uncomment one of these if not using pin 10 for CS
+  //Ethernet.init(0);   // Teensy 2.0
+  //Ethernet.init(20);  // Teensy++ 2.0
+  //Ethernet.init(15);  // ESP8266 with Adafruit Featherwing Ethernet
+  //Ethernet.init(32);  // ESP32 with Adafruit Featherwing Ethernet
+  //Ethernet.init(PB4); // STM32 with Adafruit Featherwing Ethernet
+  //Ethernet.init(11);  // Adafruit nRF52 with Featherwing Ethernet
+  //Ethernet.init(10);  // Most Arduino shields use pin 10
+
   // reserve space for the strings:
   currentLine.reserve(256);
   tweet.reserve(150);

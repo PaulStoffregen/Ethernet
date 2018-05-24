@@ -44,6 +44,15 @@ unsigned long lastConnectionTime = 0;           // last time you connected to th
 const unsigned long postingInterval = 10*1000;  // delay between updates, in milliseconds
 
 void setup() {
+  // uncomment one of these if not using pin 10 for CS
+  //Ethernet.init(0);   // Teensy 2.0
+  //Ethernet.init(20);  // Teensy++ 2.0
+  //Ethernet.init(15);  // ESP8266 with Adafruit Featherwing Ethernet
+  //Ethernet.init(32);  // ESP32 with Adafruit Featherwing Ethernet
+  //Ethernet.init(PB4); // STM32 with Adafruit Featherwing Ethernet
+  //Ethernet.init(11);  // Adafruit nRF52 with Featherwing Ethernet
+  //Ethernet.init(10);  // Most Arduino shields use pin 10
+
   // start serial port:
   Serial.begin(9600);
   while (!Serial) {

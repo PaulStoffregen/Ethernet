@@ -40,6 +40,15 @@ EthernetServer server(23);
 EthernetClient clients[4];
 
 void setup() {
+  // uncomment one of these if not using pin 10 for CS
+  //Ethernet.init(0);   // Teensy 2.0
+  //Ethernet.init(20);  // Teensy++ 2.0
+  //Ethernet.init(15);  // ESP8266 with Adafruit Featherwing Ethernet
+  //Ethernet.init(32);  // ESP32 with Adafruit Featherwing Ethernet
+  //Ethernet.init(PB4); // STM32 with Adafruit Featherwing Ethernet
+  //Ethernet.init(11);  // Adafruit nRF52 with Featherwing Ethernet
+  //Ethernet.init(10);  // Most Arduino shields use pin 10
+
   // initialize the Ethernet device
   Ethernet.begin(mac, ip, myDns, gateway, subnet);
   // start listening for clients
