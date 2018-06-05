@@ -135,15 +135,15 @@ IPAddress EthernetClass::gatewayIP()
 	return ret;
 }
 
+void EthernetClass::setHostName(char * newHostName) 
+{
+	_dhcp->setHostName(newHostName);
+}
 
-
-
-
-
-
-
-
-
+char * EthernetClass::getHostName() 
+{
+	return _dhcp->getHostName();
+}
 
 
 EthernetClass Ethernet;
