@@ -22,12 +22,28 @@ class EthernetClass {
 private:
 	static IPAddress _dnsServerAddress;
 	static DhcpClass* _dhcp;
+	static uint8_t _initialized;
+	static uint8_t _releasing;
 public:
 	// Initialise the Ethernet shield to use the provided MAC address and
 	// gain the rest of the configuration through DHCP.
 	// Returns 0 if the DHCP configuration failed, and 1 if it succeeded
 	static int begin(uint8_t *mac, unsigned long timeout = 60000, unsigned long responseTimeout = 4000);
+
+	// non blocking initialization through DHCP, call initialized() afterwards
+	static void initialize(uint8_t *mac, unsigned long timeout = 60000, unsigned long responseTimeout = 4000);
+	// return : 0 = not initialized yet, 1 = successful initialization, 2 = DHCP failed
+	static int initialized();
+
 	static int maintain();
+
+	// non blocking check for maintain the DHCP lease.
+	// DHCP_CHECK_NONE = no maintain needed
+	// DHCP_CHECK_RENEW_STARTED = maintain started, call maintainFinished()
+	// DHCP_CHECK_REBIND_STARTED = maintain started, call maintainFinished()
+	static int maintainNeeded();
+	// return : 0 = not finished, 1 = finished and successful, 2 = finished but failed
+	static int maintainFinished();
 
 	// Manaul configuration
 	static void begin(uint8_t *mac, IPAddress ip);
@@ -221,14 +237,18 @@ private:
 	unsigned long _lastCheckLeaseMillis;
 	uint8_t _dhcp_state;
 	EthernetUDP _dhcpUdpSocket;
+	uint32_t _startTime;
+	uint32_t _startResponseTime;
 
+	void init_new_DHCP_request();
 	int request_DHCP_lease();
+	int step_DHCP_lease();
 	void reset_DHCP_lease();
 	void presend_DHCP();
 	void send_DHCP_MESSAGE(uint8_t, uint16_t);
 	void printByte(char *, uint8_t);
 
-	uint8_t parseDHCPResponse(unsigned long responseTimeout, uint32_t& transactionId);
+	uint8_t tryParseDHCPResponse(uint32_t& transactionId);
 public:
 	IPAddress getLocalIp();
 	IPAddress getSubnetMask();
@@ -237,6 +257,15 @@ public:
 	IPAddress getDnsServerIp();
 
 	int beginWithDHCP(uint8_t *, unsigned long timeout = 60000, unsigned long responseTimeout = 4000);
+
+	// non blocking variant, call successful() afterwards
+	void initialize(uint8_t *mac, unsigned long timeout = 60000, unsigned long responseTimeout = 4000);
+
+	// return : 0 = not finished, 1 = finished and successful, 2 = finished but failed
+	int successful();
+
+	// return : 0 = nothing needed, 1 = renew started, 2 = rebind started, if >0 call successful to wait for
+	// finishing the rebind/release
 	int checkLease();
 };
 
