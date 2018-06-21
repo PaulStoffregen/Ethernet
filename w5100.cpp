@@ -31,6 +31,8 @@
 #define SS_PIN_DEFAULT  10
 #endif
 
+#define W5200_RESET_PIN 9
+
 // W5100 controller instance
 uint16_t W5100Class::SBASE[MAX_SOCK_NUM];
 uint16_t W5100Class::RBASE[MAX_SOCK_NUM];
@@ -69,7 +71,16 @@ uint8_t W5100Class::init(void)
 {
 	uint16_t TXBUF_BASE, RXBUF_BASE;
 	uint8_t i;
+	
+#ifdef WIZ_RESET
+	pinMode(W5200_RESET_PIN, OUTPUT);
+	digitalWrite(W5200_RESET_PIN, LOW);
+	delay(1);
+	digitalWrite(W5200_RESET_PIN, HIGH);
+	delay(150);
+#endif
 
+#ifndef WIZ_RESET
 	// Many Ethernet shields have a CAT811 or similar reset chip
 	// connected to W5100 or W5200 chips.  The W5200 will not work at
 	// all, and may even drive its MISO pin, until given an active low
@@ -79,6 +90,7 @@ uint8_t W5100Class::init(void)
 	// until the reset pulse is ended.  If your hardware has a shorter
 	// reset time, this can be edited or removed.
 	delay(560);
+#endif
 	//Serial.println("w5100 init");
 
 #ifdef USE_SPIFIFO
