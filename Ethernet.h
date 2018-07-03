@@ -5,10 +5,7 @@
 
 #define MAX_SOCK_NUM 4
 
-#include <inttypes.h>
-#include "Arduino.h"
-#include "Print.h"
-#include "IPAddress.h"
+#include <Arduino.h>
 #include "Client.h"
 #include "Server.h"
 #include "Udp.h"

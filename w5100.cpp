@@ -23,10 +23,17 @@
 // default.  Otherwise, default the default to pin 10.
 #if defined(__AVR__)
 #define SS_PIN_DEFAULT  10
+
+// MKR boards use pin 10 for MISO, MKR ETH uses pin 5 for SS
+#elif defined(PIN_SPI_MISO) && PIN_SPI_MISO == 10u
+#define SS_PIN_DEFAULT  5
+
 #elif defined(PIN_SPI_SS)
 #define SS_PIN_DEFAULT  PIN_SPI_SS
+
 #elif defined(CORE_SS0_PIN)
 #define SS_PIN_DEFAULT  CORE_SS0_PIN
+
 #else
 #define SS_PIN_DEFAULT  10
 #endif
