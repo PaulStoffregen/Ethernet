@@ -4,10 +4,12 @@
  Serves the output of a Barometric Pressure Sensor as a web page.
  Uses the SPI library. For details on the sensor, see:
  http://www.sparkfun.com/commerce/product_info.php?products_id=8161
- http://www.vti.fi/en/support/obsolete_products/pressure_sensors/
 
  This sketch adapted from Nathan Seidle's SCP1000 example for PIC:
  http://www.sparkfun.com/datasheets/Sensors/SCP1000-Testing.zip
+
+ TODO: this hardware is long obsolete.  This example program should
+ be rewritten to use https://www.sparkfun.com/products/9721
 
  Circuit:
  SCP1000 sensor attached to pins 6,7, and 11 - 13:
