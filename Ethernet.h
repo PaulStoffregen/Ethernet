@@ -39,10 +39,18 @@ public:
 	static void begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress gateway);
 	static void begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress gateway, IPAddress subnet);
 	static void init(uint8_t sspin = 10);
+
+	static void MACAddress(uint8_t *mac_address);
 	static IPAddress localIP();
 	static IPAddress subnetMask();
 	static IPAddress gatewayIP();
 	static IPAddress dnsServerIP() { return _dnsServerAddress; }
+
+	void setMACAddress(const uint8_t *mac_address);
+	void setLocalIP(const IPAddress local_ip);
+	void setSubnetMask(const IPAddress subnet);
+	void setGatewayIP(const IPAddress gateway);
+	void setDnsServerIP(const IPAddress dns_server) { _dnsServerAddress = dns_server; }
 
 	friend class EthernetClient;
 	friend class EthernetServer;

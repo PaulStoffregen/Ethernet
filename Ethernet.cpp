@@ -111,11 +111,19 @@ int EthernetClass::maintain()
 			_dnsServerAddress = _dhcp->getDnsServerIp();
 			break;
 		default:
-			//this is actually a error, it will retry though
+			//this is actually an error, it will retry though
 			break;
 		}
 	}
 	return rc;
+}
+
+
+void EthernetClass::MACAddress(uint8_t *mac_address)
+{
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	W5100.getMACAddress(mac_address);
+	SPI.endTransaction();
 }
 
 IPAddress EthernetClass::localIP()
@@ -145,7 +153,36 @@ IPAddress EthernetClass::gatewayIP()
 	return ret;
 }
 
+void EthernetClass::setMACAddress(const uint8_t *mac_address)
+{
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	W5100.setMACAddress(mac_address);
+	SPI.endTransaction();
+}
 
+void EthernetClass::setLocalIP(const IPAddress local_ip)
+{
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	IPAddress ip = local_ip;
+	W5100.setIPAddress(ip.raw_address());
+	SPI.endTransaction();
+}
+
+void EthernetClass::setSubnetMask(const IPAddress subnet)
+{
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	IPAddress ip = subnet;
+	W5100.setSubnetMask(ip.raw_address());
+	SPI.endTransaction();
+}
+
+void EthernetClass::setGatewayIP(const IPAddress gateway)
+{
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	IPAddress ip = gateway;
+	W5100.setGatewayIp(ip.raw_address());
+	SPI.endTransaction();
+}
 
 
 
