@@ -74,8 +74,11 @@ W5100Class W5100;
 
 uint8_t W5100Class::init(void)
 {
+	static bool initialized = false;
 	uint16_t TXBUF_BASE, RXBUF_BASE;
 	uint8_t i;
+
+	if (initialized) return 1;
 
 	// Many Ethernet shields have a CAT811 or similar reset chip
 	// connected to W5100 or W5200 chips.  The W5200 will not work at
@@ -173,6 +176,7 @@ uint8_t W5100Class::init(void)
 		SBASE[i] = TXBUF_BASE + SSIZE * i;
 		RBASE[i] = RXBUF_BASE + SSIZE * i;
 	}
+	initialized = true;
 	return 1; // successful init
 }
 
@@ -248,6 +252,28 @@ uint8_t W5100Class::isW5500(void)
 	return 1;
 }
 
+W5100Linkstatus W5100Class::getLinkStatus()
+{
+	uint8_t phystatus;
+
+	if (!init()) return UNKNOWN;
+	switch (chip) {
+	  case 52:
+		SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+		phystatus = readPSTATUS_W5200();
+		SPI.endTransaction();
+		if (phystatus & 0x20) return LINK_ON;
+		return LINK_OFF;
+	  case 55:
+		SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+		phystatus = readPHYCFGR_W5500();
+		SPI.endTransaction();
+		if (phystatus & 0x01) return LINK_ON;
+		return LINK_OFF;
+	  default:
+		return UNKNOWN;
+	}
+}
 
 #ifdef USE_SPIFIFO
 uint16_t W5100Class::write(uint16_t addr, const uint8_t *buf, uint16_t len)

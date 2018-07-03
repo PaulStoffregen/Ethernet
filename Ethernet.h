@@ -10,6 +10,12 @@
 #include "Server.h"
 #include "Udp.h"
 
+enum EthernetLinkStatus {
+	Unknown,
+	LinkON,
+	LinkOFF
+};
+
 class EthernetUDP;
 class EthernetClient;
 class EthernetServer;
@@ -25,6 +31,7 @@ public:
 	// Returns 0 if the DHCP configuration failed, and 1 if it succeeded
 	static int begin(uint8_t *mac, unsigned long timeout = 60000, unsigned long responseTimeout = 4000);
 	static int maintain();
+	static EthernetLinkStatus linkStatus();
 
 	// Manaul configuration
 	static void begin(uint8_t *mac, IPAddress ip);

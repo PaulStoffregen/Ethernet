@@ -90,6 +90,12 @@ public:
   static const uint8_t RAW  = 255;
 };
 
+enum W5100Linkstatus {
+  UNKNOWN,
+  LINK_ON,
+  LINK_OFF
+};
+
 class W5100Class {
 
 public:
@@ -154,6 +160,7 @@ public:
   static uint16_t read##name(uint8_t *_buff) {    \
     return read(address, _buff, size);            \
   }
+  static W5100Linkstatus getLinkStatus();
 
 public:
   __GP_REGISTER8 (MR,     0x0000);    // Mode
@@ -174,6 +181,9 @@ public:
   __GP_REGISTER16(UPORT,  0x002E);    // Unreachable Port address in UDP mode (W5100 only)
   __GP_REGISTER8 (VERSIONR_W5200,0x001F);   // Chip Version Register (W5200 only)
   __GP_REGISTER8 (VERSIONR_W5500,0x0039);   // Chip Version Register (W5500 only)
+  __GP_REGISTER8 (PSTATUS_W5200,     0x0035);    // PHY Status
+  __GP_REGISTER8 (PHYCFGR_W5500,     0x002E);    // PHY Configuration register, default: 10111xxx
+
 
 #undef __GP_REGISTER8
 #undef __GP_REGISTER16

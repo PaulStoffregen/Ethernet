@@ -80,6 +80,16 @@ void EthernetClass::init(uint8_t sspin)
 	W5100.setSS(sspin);
 }
 
+EthernetLinkStatus EthernetClass::linkStatus()
+{
+	switch (W5100.getLinkStatus()) {
+		case UNKNOWN:  return Unknown;
+		case LINK_ON:  return LinkON;
+		case LINK_OFF: return LinkOFF;
+		default:       return Unknown;
+	}
+}
+
 int EthernetClass::maintain()
 {
 	int rc = DHCP_CHECK_NONE;
