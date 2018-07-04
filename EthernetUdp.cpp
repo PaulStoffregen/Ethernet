@@ -26,6 +26,7 @@
  * bjoern@cs.stanford.edu 12/30/2008
  */
 
+#include <Arduino.h>
 #include "Ethernet.h"
 #include "Dns.h"
 #include "w5100.h"

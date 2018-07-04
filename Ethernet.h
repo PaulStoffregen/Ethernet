@@ -2,6 +2,11 @@
 #define ethernet_h_
 
 // All symbols exposed to Arduino sketches are contained in this header file
+//
+// Older versions had much of this stuff in EthernetClient.h, EthernetServer.h,
+// and socket.h.  Including headers in different order could cause trouble, so
+// these "friend" classes are now defined in the same header file.  socket.h
+// was removed to avoid possible conflict with the C library header files.
 
 #define MAX_SOCK_NUM 4
 

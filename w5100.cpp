@@ -7,6 +7,7 @@
  * published by the Free Software Foundation.
  */
 
+#include <Arduino.h>
 #include "w5100.h"
 
 #if defined(__arm__) && defined(TEENSYDUINO)
@@ -19,24 +20,42 @@
 //#define W5500_4K_BUFFERS
 //#define W5200_4K_BUFFERS
 
-// If the core library defines a SS pin, use it as the
-// default.  Otherwise, default the default to pin 10.
-#if defined(__AVR__)
-#define SS_PIN_DEFAULT  10
 
-// MKR boards use pin 10 for MISO, MKR ETH uses pin 5 for SS
-#elif defined(PIN_SPI_MISO) && PIN_SPI_MISO == 10u
+/***************************************************/
+/**            Default SS pin setting             **/
+/***************************************************/
+
+// If variant.h or other headers specifically define the
+// default SS pin for ethernet, use it.
+#if defined(PIN_SPI_SS_ETHERNET_LIB)
+#define SS_PIN_DEFAULT  PIN_SPI_SS_ETHERNET_LIB
+
+// MKR boards default to pin 5 for MKR ETH
+// Pins 8-10 are MOSI/SCK/MISO on MRK, so don't use pin 10
+#elif defined(USE_ARDUINO_MKR_PIN_LAYOUT) || defined(ARDUINO_SAMD_MKRZERO) || defined(ARDUINO_SAMD_MKR1000) || defined(ARDUINO_SAMD_MKRFox1200) || defined(ARDUINO_SAMD_MKRGSM1400) || defined(ARDUINO_SAMD_MKRWAN1300)
 #define SS_PIN_DEFAULT  5
 
+// For boards using AVR, assume shields with SS on pin 10
+// will be used.  This allows for Arduino Mega (where
+// SS is pin 53) and Arduino Leonardo (where SS is pin 17)
+// to work by default with Arduino Ethernet Shield R2 & R3.
+#elif defined(__AVR__)
+#define SS_PIN_DEFAULT  10
+
+// If variant.h or other headers define these names
+// use them if none of the other cases match
 #elif defined(PIN_SPI_SS)
 #define SS_PIN_DEFAULT  PIN_SPI_SS
-
 #elif defined(CORE_SS0_PIN)
 #define SS_PIN_DEFAULT  CORE_SS0_PIN
 
+// As a final fallback, use pin 10
 #else
 #define SS_PIN_DEFAULT  10
 #endif
+
+
+
 
 // W5100 controller instance
 uint16_t W5100Class::SBASE[MAX_SOCK_NUM];

@@ -2,6 +2,7 @@
 // (c) Copyright 2009-2010 MCQN Ltd.
 // Released under Apache License, version 2.0
 
+#include <Arduino.h>
 #include "Ethernet.h"
 #include "Dns.h"
 #include "w5100.h"
