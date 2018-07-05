@@ -192,21 +192,27 @@ public:
   // W5100 Socket registers
   // ----------------------
 private:
+  static uint16_t CH_BASE(void) {
+    //if (chip == 55) return 0x1000;
+    //if (chip == 52) return 0x4000;
+    //return 0x0400;
+    return CH_BASE_MSB << 8;
+  }
+  static uint8_t CH_BASE_MSB; // 1 redundant byte, saves ~80 bytes code on AVR
+  static const uint16_t CH_SIZE = 0x0100;
+
   static inline uint8_t readSn(SOCKET s, uint16_t addr) {
-    return read(CH_BASE + s * CH_SIZE + addr);
+    return read(CH_BASE() + s * CH_SIZE + addr);
   }
   static inline uint8_t writeSn(SOCKET s, uint16_t addr, uint8_t data) {
-    return write(CH_BASE + s * CH_SIZE + addr, data);
+    return write(CH_BASE() + s * CH_SIZE + addr, data);
   }
   static inline uint16_t readSn(SOCKET s, uint16_t addr, uint8_t *buf, uint16_t len) {
-    return read(CH_BASE + s * CH_SIZE + addr, buf, len);
+    return read(CH_BASE() + s * CH_SIZE + addr, buf, len);
   }
   static inline uint16_t writeSn(SOCKET s, uint16_t addr, uint8_t *buf, uint16_t len) {
-    return write(CH_BASE + s * CH_SIZE + addr, buf, len);
+    return write(CH_BASE() + s * CH_SIZE + addr, buf, len);
   }
-
-  static uint16_t CH_BASE;
-  static const uint16_t CH_SIZE = 0x0100;
 
 #define __SOCKET_REGISTER8(name, address)                    \
   static inline void write##name(SOCKET _s, uint8_t _data) { \
@@ -271,13 +277,25 @@ private:
   static uint8_t isW5500(void);
 
 public:
+  // TODO: auto-configure SOCKETS, SSIZE, SMASK
   static const int SOCKETS = 4;
-  static uint16_t SMASK;
-  static uint16_t SSIZE;
-//private:
-  //receive and transmit have same buffer sizes
-  static uint16_t SBASE[SOCKETS]; // Tx buffer base address
-  static uint16_t RBASE[SOCKETS]; // Rx buffer base address
+  static const uint16_t SSIZE = 2048;
+  static const uint16_t SMASK = 0x07FF;
+  static uint16_t SBASE(uint8_t socknum) {
+    if (chip == 51) {
+      return socknum * SSIZE + 0x4000;
+    } else {
+      return socknum * SSIZE + 0x8000;
+    }
+  }
+  static uint16_t RBASE(uint8_t socknum) {
+    if (chip == 51) {
+      return socknum * SSIZE + 0x6000;
+    } else {
+      return socknum * SSIZE + 0xC000;
+    }
+  }
+
   static bool hasOffsetAddressMapping(void) {
     if (chip == 55) return true;
     return false;

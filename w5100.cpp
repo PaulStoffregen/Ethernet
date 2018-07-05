@@ -58,12 +58,8 @@
 
 
 // W5100 controller instance
-uint16_t W5100Class::SBASE[MAX_SOCK_NUM];
-uint16_t W5100Class::RBASE[MAX_SOCK_NUM];
-uint16_t W5100Class::CH_BASE;
-uint16_t W5100Class::SSIZE;
-uint16_t W5100Class::SMASK;
 uint8_t  W5100Class::chip;
+uint8_t  W5100Class::CH_BASE_MSB;
 uint8_t  W5100Class::ss_pin = SS_PIN_DEFAULT;
 W5100Class W5100;
 
@@ -94,7 +90,6 @@ W5100Class W5100;
 uint8_t W5100Class::init(void)
 {
 	static bool initialized = false;
-	uint16_t TXBUF_BASE, RXBUF_BASE;
 	uint8_t i;
 
 	if (initialized) return 1;
@@ -125,16 +120,7 @@ uint8_t W5100Class::init(void)
 	// from detecting the other chips can leave the W5200 in a state
 	// where it won't recover, unless given a reset pulse.
 	if (isW5200()) {
-		CH_BASE = 0x4000;
-		#ifdef W5200_4K_BUFFERS
-		SSIZE = 4096;
-		SMASK = 0x0FFF;
-		#else
-		SSIZE = 2048;    // 2K buffers
-		SMASK = 0x07FF;
-		#endif
-		TXBUF_BASE = 0x8000;
-		RXBUF_BASE = 0xC000;
+		CH_BASE_MSB = 0x40;
 		for (i=0; i<MAX_SOCK_NUM; i++) {
 			writeSnRX_SIZE(i, SSIZE >> 10);
 			writeSnTX_SIZE(i, SSIZE >> 10);
@@ -147,16 +133,7 @@ uint8_t W5100Class::init(void)
 	// SPI well with this chip.  It appears to be very resilient,
 	// so try it after the fragile W5200
 	} else if (isW5500()) {
-		CH_BASE = 0x1000;
-		#ifdef W5500_4K_BUFFERS
-		SSIZE = 4096;    // 4K buffers
-		SMASK = 0x0FFF;
-		#else
-		SSIZE = 2048;    // 2K buffers
-		SMASK = 0x07FF;
-		#endif
-		TXBUF_BASE = 0x8000;
-		RXBUF_BASE = 0xC000;
+		CH_BASE_MSB = 0x10;
 		#ifdef W5500_4K_BUFFERS
 		for (i=0; i<MAX_SOCK_NUM; i++) {
 			writeSnRX_SIZE(i, SSIZE >> 10);
@@ -173,11 +150,7 @@ uint8_t W5100Class::init(void)
 	// communication.  W5100 is also the only chip without a VERSIONR
 	// register for identification, so we check this last.
 	} else if (isW5100()) {
-		CH_BASE = 0x0400;
-		SSIZE = 2048;
-		SMASK = 0x07FF;
-		TXBUF_BASE = 0x4000;
-		RXBUF_BASE = 0x6000;
+		CH_BASE_MSB = 0x04;
 		writeTMSR(0x55);
 		writeRMSR(0x55);
 	// No hardware seems to be present.  Or it could be a W5200
@@ -190,11 +163,6 @@ uint8_t W5100Class::init(void)
 		return 0; // no known chip is responding :-(
 	}
 	SPI.endTransaction();
-	// Initialize the socket base addresses
-	for (int i=0; i<MAX_SOCK_NUM; i++) {
-		SBASE[i] = TXBUF_BASE + SSIZE * i;
-		RBASE[i] = RXBUF_BASE + SSIZE * i;
-	}
 	initialized = true;
 	return 1; // successful init
 }

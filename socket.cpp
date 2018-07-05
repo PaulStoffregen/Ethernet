@@ -255,7 +255,7 @@ static void read_data(uint8_t s, uint16_t src, uint8_t *dst, uint16_t len)
 
 	//Serial.printf("read_data, len=%d, at:%d\n", len, src);
 	src_mask = (uint16_t)src & W5100.SMASK;
-	src_ptr = W5100.RBASE[s] + src_mask;
+	src_ptr = W5100.RBASE(s) + src_mask;
 
 	if (W5100.hasOffsetAddressMapping() || src_mask + len <= W5100.SSIZE) {
 		W5100.read(src_ptr, dst, len);
@@ -263,7 +263,7 @@ static void read_data(uint8_t s, uint16_t src, uint8_t *dst, uint16_t len)
 		size = W5100.SSIZE - src_mask;
 		W5100.read(src_ptr, dst, size);
 		dst += size;
-		W5100.read(W5100.RBASE[s], dst, len - size);
+		W5100.read(W5100.RBASE(s), dst, len - size);
 	}
 }
 
@@ -336,7 +336,7 @@ uint8_t EthernetClass::socketPeek(uint8_t s)
 	uint8_t b;
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
 	uint16_t ptr = state[s].RX_RD;
-	W5100.read((ptr & W5100.SMASK) + W5100.RBASE[s], &b, 1);
+	W5100.read((ptr & W5100.SMASK) + W5100.RBASE(s), &b, 1);
 	SPI.endTransaction();
 	return b;
 }
@@ -368,7 +368,7 @@ static void write_data(uint8_t s, uint16_t data_offset, const uint8_t *data, uin
 	uint16_t ptr = W5100.readSnTX_WR(s);
 	ptr += data_offset;
 	uint16_t offset = ptr & W5100.SMASK;
-	uint16_t dstAddr = offset + W5100.SBASE[s];
+	uint16_t dstAddr = offset + W5100.SBASE(s);
 
 	if (W5100.hasOffsetAddressMapping() || offset + len <= W5100.SSIZE) {
 		W5100.write(dstAddr, data, len);
@@ -376,7 +376,7 @@ static void write_data(uint8_t s, uint16_t data_offset, const uint8_t *data, uin
 		// Wrap around circular buffer
 		uint16_t size = W5100.SSIZE - offset;
 		W5100.write(dstAddr, data, size);
-		W5100.write(W5100.SBASE[s], data + size, len - size);
+		W5100.write(W5100.SBASE(s), data + size, len - size);
 	}
 	ptr += len;
 	W5100.writeSnTX_WR(s, ptr);
