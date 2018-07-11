@@ -10,13 +10,6 @@
 #include <Arduino.h>
 #include "w5100.h"
 
-#if defined(__arm__) && defined(TEENSYDUINO)
-#include "SPIFIFO.h"
-#ifdef  HAS_SPIFIFO
-#define USE_SPIFIFO
-#endif
-#endif
-
 //#define W5500_4K_BUFFERS
 //#define W5200_4K_BUFFERS
 
@@ -105,14 +98,9 @@ uint8_t W5100Class::init(void)
 	delay(560);
 	//Serial.println("w5100 init");
 
-#ifdef USE_SPIFIFO
-	SPI.begin();
-	SPIFIFO.begin(ss_pin, SPI_CLOCK_12MHz);  // W5100 is 14 MHz max
-#else
 	SPI.begin();
 	initSS();
 	resetSS();
-#endif
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
 
 	// Attempt W5200 detection first, because W5200 does not properly
@@ -262,76 +250,6 @@ W5100Linkstatus W5100Class::getLinkStatus()
 	}
 }
 
-#ifdef USE_SPIFIFO
-uint16_t W5100Class::write(uint16_t addr, const uint8_t *buf, uint16_t len)
-{
-  uint32_t i;
-
-  if (chip == 51) {
-    for (i=0; i<len; i++) {
-	SPIFIFO.write16(0xF000 | (addr >> 8), SPI_CONTINUE);
-	SPIFIFO.write16((addr << 8) | buf[i]);
-	addr++;
-	SPIFIFO.read();
-	SPIFIFO.read();
-    }
-  } else if (chip == 52) {
-	SPIFIFO.clear();
-	SPIFIFO.write16(addr, SPI_CONTINUE);
-	SPIFIFO.write16(len | 0x8000, SPI_CONTINUE);
-	for (i=0; i<len; i++) {
-		SPIFIFO.write(buf[i], ((i+1<len) ? SPI_CONTINUE : 0));
-		SPIFIFO.read();
-	}
-	SPIFIFO.read();
-	SPIFIFO.read();
-  } else {
-	//SPIFIFO.clear();
-	SPIFIFO.write16(addr, SPI_CONTINUE);
-	if (addr < 0x100) {
-		// common registers 00nn
-		SPIFIFO.write16(0x0400 | *buf++,
-			((len > 1) ? SPI_CONTINUE : 0));
-	} else if (addr < 0x8000) {
-		// socket registers  10nn, 11nn, 12nn, 13nn, etc
-		SPIFIFO.write16(((addr << 5) & 0xE000) | 0x0C00 | *buf++,
-			((len > 1) ? SPI_CONTINUE : 0));
-	} else if (addr < 0xC000) {
-		// transmit buffers  8000-87FF, 8800-8FFF, 9000-97FF, etc
-		#ifdef W5500_4K_BUFFERS
-		SPIFIFO.write16(((addr << 1) & 0x6000) | 0x1400 | *buf++, // 4K buffers
-			((len > 1) ? SPI_CONTINUE : 0));
-		#else
-		SPIFIFO.write16(((addr << 2) & 0xE000) | 0x1400 | *buf++, // 2K buffers
-			((len > 1) ? SPI_CONTINUE : 0));
-		#endif
-	} else {
-		// receive buffers
-		#ifdef W5500_4K_BUFFERS
-		SPIFIFO.write16(((addr << 1) & 0x6000) | 0x1C00 | *buf++, // 4K buffers
-			((len > 1) ? SPI_CONTINUE : 0));
-		#else
-		SPIFIFO.write16(((addr << 2) & 0xE000) | 0x1C00 | *buf++, // 2K buffers
-			((len > 1) ? SPI_CONTINUE : 0));
-		#endif
-	}
-	len--;
-	while (len >= 2) {
-		len -= 2;
-		SPIFIFO.write16((*buf << 8) | *(buf+1), (len == 0) ? 0 : SPI_CONTINUE);
-		buf += 2;
-		SPIFIFO.read();
-	}
-	if (len) {
-		SPIFIFO.write(*buf);
-		SPIFIFO.read();
-	}
-	SPIFIFO.read();
-	SPIFIFO.read();
-  }
-  return len;
-}
-#else
 uint16_t W5100Class::write(uint16_t addr, const uint8_t *buf, uint16_t len)
 {
   uint8_t cmd[8];
@@ -414,168 +332,7 @@ uint16_t W5100Class::write(uint16_t addr, const uint8_t *buf, uint16_t len)
   }
   return len;
 }
-#endif
 
-
-
-
-
-
-
-#ifdef USE_SPIFIFO
-uint16_t W5100Class::read(uint16_t addr, uint8_t *buf, uint16_t len)
-{
-  uint32_t i;
-
-  if (chip == 51) {
-    for (i=0; i<len; i++) {
-	#if 1
-	SPIFIFO.write(0x0F, SPI_CONTINUE);
-	SPIFIFO.write16(addr, SPI_CONTINUE);
-	addr++;
-	SPIFIFO.read();
-	SPIFIFO.write(0);
-	SPIFIFO.read();
-	buf[i] = SPIFIFO.read();
-	#endif
-	#if 0
-	// this does not work, but why?
-	SPIFIFO.write16(0x0F00 | (addr >> 8), SPI_CONTINUE);
-	SPIFIFO.write16(addr << 8);
-	addr++;
-	SPIFIFO.read();
-	buf[i] = SPIFIFO.read();
-	#endif
-    }
-  } else if (chip == 52) {
-	// len = 1:  write header, write 1 byte, read
-	// len = 2:  write header, write 2 byte, read
-	// len = 3,5,7
-	SPIFIFO.clear();
-	SPIFIFO.write16(addr, SPI_CONTINUE);
-	SPIFIFO.write16(len & 0x7FFF, SPI_CONTINUE);
-	SPIFIFO.read();
-	if (len == 1) {
-		// read only 1 byte
-		SPIFIFO.write(0);
-		SPIFIFO.read();
-		*buf = SPIFIFO.read();
-	} else if (len == 2) {
-		// read only 2 bytes
-		SPIFIFO.write16(0);
-		SPIFIFO.read();
-		uint32_t val = SPIFIFO.read();
-		*buf++ = val >> 8;
-		*buf = val;
-	} else if ((len & 1)) {
-		// read 3 or more, odd length
-  		//Serial.print("W5200 read, len=");
-		//Serial.println(len);
-		uint32_t count = len / 2;
-		SPIFIFO.write16(0, SPI_CONTINUE);
-		SPIFIFO.read();
-		do {
-			if (count > 1) SPIFIFO.write16(0, SPI_CONTINUE);
-			else SPIFIFO.write(0);
-			uint32_t val = SPIFIFO.read();
-			//TODO: WebClient_speedtest with READSIZE 7 is
-			//dramatically faster with this Serial.print(),
-			//and the 2 above, but not without both.  Why?!
-			//Serial.println(val, HEX);
-			*buf++ = val >> 8;
-			*buf++ = val;
-		} while (--count > 0);
-		*buf = SPIFIFO.read();
-		//Serial.println(*buf, HEX);
-	} else {
-		// read 4 or more, even length
-  		//Serial.print("W5200 read, len=");
-		//Serial.println(len);
-		uint32_t count = len / 2 - 1;
-		SPIFIFO.write16(0, SPI_CONTINUE);
-		SPIFIFO.read();
-		do {
-			SPIFIFO.write16(0, (count > 1) ? SPI_CONTINUE : 0);
-			uint32_t val = SPIFIFO.read();
-			*buf++ = val >> 8;
-			*buf++ = val;
-		} while (--count > 0);
-		uint32_t val = SPIFIFO.read();
-		*buf++ = val >> 8;
-		*buf++ = val;
-	}
-  } else {
-	//SPIFIFO.clear();
-	SPIFIFO.write16(addr, SPI_CONTINUE);
-	if (addr < 0x100) {
-		// common registers 00nn
-		SPIFIFO.write16(0,
-			((len > 1) ? SPI_CONTINUE : 0));
-	} else if (addr < 0x8000) {
-		// socket registers  10nn, 11nn, 12nn, 13nn, etc
-		SPIFIFO.write16(((addr << 5) & 0xE000) | 0x0800,
-			((len > 1) ? SPI_CONTINUE : 0));
-	} else if (addr < 0xC000) {
-		// transmit buffers  8000-87FF, 8800-8FFF, 9000-97FF, etc
-		#ifdef W5500_4K_BUFFERS
-		SPIFIFO.write16(((addr << 1) & 0x6000) | 0x1000, // 4K buffers
-			((len > 1) ? SPI_CONTINUE : 0));
-		#else
-		SPIFIFO.write16(((addr << 2) & 0xE000) | 0x1000, // 2K buffers
-			((len > 1) ? SPI_CONTINUE : 0));
-		#endif
-	} else {
-		// receive buffers
-		#ifdef W5500_4K_BUFFERS
-		SPIFIFO.write16(((addr << 1) & 0x6000) | 0x1800, // 4K buffers
-			((len > 1) ? SPI_CONTINUE : 0));
-		#else
-		SPIFIFO.write16(((addr << 2) & 0xE000) | 0x1800, // 2K buffers
-			((len > 1) ? SPI_CONTINUE : 0));
-		#endif
-	}
-	SPIFIFO.read();
-	if (len <= 1) {
-		*buf++ = SPIFIFO.read();
-	} else if (len == 2) {
-		SPIFIFO.write(0);
-		*buf++ = SPIFIFO.read();
-		*buf++ = SPIFIFO.read();
-	} else if (len & 1) {
-		uint32_t count = len >> 1;
-		SPIFIFO.write16(0, (count > 1) ? SPI_CONTINUE : 0);
-		*buf++ = SPIFIFO.read();
-		while (count > 1) {
-			count--;
-			SPIFIFO.write16(0, (count > 1) ? SPI_CONTINUE : 0);
-			uint32_t val = SPIFIFO.read();
-			*buf++ = val >> 8;
-			*buf++ = val;
-		}
-		uint32_t val = SPIFIFO.read();
-		*buf++ = val >> 8;
-		*buf++ = val;
-	} else {
-		SPIFIFO.write16(0, SPI_CONTINUE);
-		*buf++ = SPIFIFO.read();
-		uint32_t count = len >> 1;
-		while (count > 1) {
-			count--;
-			if (count > 1) {
-				SPIFIFO.write16(0, SPI_CONTINUE);
-			} else {
-				SPIFIFO.write(0, 0);
-			}
-			uint32_t val = SPIFIFO.read();
-			*buf++ = val >> 8;
-			*buf++ = val;
-		}
-		*buf = SPIFIFO.read();
-	}
-  }
-  return len;
-}
-#else
 uint16_t W5100Class::read(uint16_t addr, uint8_t *buf, uint16_t len)
 {
   uint8_t cmd[4];
@@ -649,7 +406,6 @@ uint16_t W5100Class::read(uint16_t addr, uint8_t *buf, uint16_t len)
   }
   return len;
 }
-#endif
 
 void W5100Class::execCmdSn(SOCKET s, SockCMD _cmd) {
   // Send command to socket
