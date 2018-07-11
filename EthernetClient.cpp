@@ -27,7 +27,7 @@ int EthernetClient::connect(IPAddress ip, uint16_t port)
 		}
 		sockindex = MAX_SOCK_NUM;
 	}
-#ifdef ESP8266
+#if defined(ESP8266) || defined(ESP32)
 	if (ip == IPAddress((uint32_t)0) || ip == IPAddress(0xFFFFFFFFul)) return 0;
 #else
 	if (ip == IPAddress(0ul) || ip == IPAddress(0xFFFFFFFFul)) return 0;
