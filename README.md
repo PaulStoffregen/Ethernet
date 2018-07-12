@@ -17,22 +17,23 @@ http://www.pjrc.com/teensy/td_libs_Ethernet.html
 
 | Board			| Chip	| Shield / Module	| Internet	| Local		|
 | ---------------------	| :---: | :-------------------: | ------------: | ------------: |
-| Teensy 3.6		| W5500	| WIZ850io		| 97.37		| 1190.90	|
-| Teensy 3.6		| W5200	| WIZ820io		| 96.65		| 1157.56	|
-| Teensy 3.6		| W5100	| WIZ811MJ		| 9.61		| 10.16		|
-| Teensy 3.2		| W5200	| WIZ820io		| 96.56		| 1030.55	|
-| Teensy LC		| W5500	| WIZ850io		| 97.51		| 390.46	|
-| Teensy 2.0		| W5100	| WIZ811MJ		| 9.75		| 10.16		|
-| Arduino Uno R3	| W5500 | Seeed Ethernet	| 96.47		| 284.42	|
-| Arduino Uno R3	| W5100 | Arduino Ethernet R3	| 9.66		| 10.17		|
-| Arduino Uno R3	| W5100 | Ethernet R2 (clone)	| 9.65		| 10.17		|
-| Arduino Due		| W5100 | Arduino Ethernet R3	| 9.72		| 10.16		|
-| Arduino Due		| W5500 | Seeed Ethernet	| 96.42		| 378.85	|
-| Arduino Zero		| W5500 | Seeed Ethernet	| 96.33		| 234.03	|
-| Arduino 101		| W5500 | Seeed Ethernet	| 		| 360.82	|
+| Teensy 3.6		| W5500	| WIZ850io		| 		| 1142.40	|
+| Teensy 3.6		| W5200	| WIZ820io		| 		| 1100.50	|
+| Teensy 3.6		| W5100	| WIZ811MJ		| 		| 		|
+| Teensy 3.2		| W5500	| WIZ850io		| 		| 955.60	|
+| Teensy LC		| W5500	| WIZ850io		| 		| 479.97	|
+| Teensy 2.0		| W5100	| WIZ811MJ		| 		| 		|
+| Arduino MKR1000	| W5500	| MKR ETH		|		| 324.14	|
+| Arduino Uno R3	| W5500 | Seeed Ethernet	| 		| 342.35	|
+| Arduino Uno R3	| W5100 | Arduino Ethernet R3	| 		| 		|
+| Arduino Uno R3	| W5100 | Ethernet R2 (clone)	| 		| 		|
+| Arduino Due		| W5100 | Arduino Ethernet R3	| 		| 		|
+| Arduino Due		| W5500 | Seeed Ethernet	| 		| 696.62	|
+| Arduino Zero		| W5500 | Seeed Ethernet	| 		| 344.42	|
+| Arduino 101		| W5500 | Seeed Ethernet	| 		| 359.62	|
 | ChipKit Uno32		| W5500 | Seeed Ethernet	| 		| 860.66	|
-| Mega 2560 (clone)	| W5500 | Seeed Ethernet	| 		| 337.02	|
-| Mega 2560 (clone)	| W5100 | Ethernet R3 		| 		| 10.16		|
+| Mega 2560		| W5500 | Seeed Ethernet	| 		| 337.02	|
+| Mega 2560		| W5100 | Ethernet R3 		| 		| 		|
 | ESP8266 Feather	| W5500 | Featherwing Ethernet	|		| 608.68	|
 | ESP32 Feather		| W5500 | Featherwing Ethernet	|		| 964.03	|
 
