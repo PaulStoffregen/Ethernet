@@ -29,11 +29,13 @@ http://www.pjrc.com/teensy/td_libs_Ethernet.html
 | Arduino Due		| W5100 | Arduino Ethernet R3	| 9.72		| 10.16		|
 | Arduino Due		| W5500 | Seeed Ethernet	| 96.42		| 378.85	|
 | Arduino Zero		| W5500 | Seeed Ethernet	| 96.33		| 234.03	|
-| Arduino 101		| W5500 | Seeed Ethernet	| fail		| fail		|
-| ChipKit Uno32		| W5500 | Seeed Ethernet	| fail		| fail		|
-| Wemos D1 (ESP8266)	| W5500 | Seeed Ethernet	| fail		| fail		|
-| Mega 2560 (clone)	| W5500 | Seeed Ethernet	| fail		| fail		|
-| Mega 2560 (clone)	| W5100 | Ethernet R2 (clone)	| fail		| fail		|
+| Arduino 101		| W5500 | Seeed Ethernet	| 		| 360.82	|
+| ChipKit Uno32		| W5500 | Seeed Ethernet	| 		| 860.66	|
+| Wemos D1 (ESP8266)	| W5500 | Seeed Ethernet	| 		| fail		|
+| Mega 2560 (clone)	| W5500 | Seeed Ethernet	| 		| 337.02	|
+| Mega 2560 (clone)	| W5100 | Ethernet R3 		| 		| 10.16		|
+| ESP8266 Feather	| W5500 | Featherwing Ethernet	|		| fail		|
+| ESP32 Feather		| W5500 | Featherwing Ethernet	|		| 964.03	|
 
-
-
+ESP8266 & ESP32 require edit to SPI.h to add SPI.transfer(data, size)
+https://github.com/espressif/arduino-esp32/issues/1623
