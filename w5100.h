@@ -22,6 +22,13 @@
 
 #define MAX_SOCK_NUM 4
 
+
+// Arduino 101's SPI can not run faster than 8 MHz.
+#if defined(ARDUINO_ARCH_ARC32)
+#undef SPI_ETHERNET_SETTINGS
+#define SPI_ETHERNET_SETTINGS SPISettings(8000000, MSBFIRST, SPI_MODE0)
+#endif
+
 typedef uint8_t SOCKET;
 
 class SnMR {
