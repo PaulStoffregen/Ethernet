@@ -40,14 +40,13 @@ byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packe
 EthernetUDP Udp;
 
 void setup() {
-  // uncomment one of these if not using pin 10 for CS
+  // You can use Ethernet.init(pin) to configure the CS pin
+  //Ethernet.init(10);  // Most Arduino shields
+  //Ethernet.init(5);   // MKR ETH shield
   //Ethernet.init(0);   // Teensy 2.0
   //Ethernet.init(20);  // Teensy++ 2.0
   //Ethernet.init(15);  // ESP8266 with Adafruit Featherwing Ethernet
-  //Ethernet.init(32);  // ESP32 with Adafruit Featherwing Ethernet
-  //Ethernet.init(PB4); // STM32 with Adafruit Featherwing Ethernet
-  //Ethernet.init(11);  // Adafruit nRF52 with Featherwing Ethernet
-  //Ethernet.init(10);  // Most Arduino shields use pin 10
+  //Ethernet.init(33);  // ESP32 with Adafruit Featherwing Ethernet
 
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
