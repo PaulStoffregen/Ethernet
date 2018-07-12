@@ -12,7 +12,7 @@ int EthernetClass::begin(uint8_t *mac, unsigned long timeout, unsigned long resp
 	_dhcp = &s_dhcp;
 
 	// Initialise the basic info
-	W5100.init();
+	if (W5100.init() == 0) return 0;
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
 	W5100.setMACAddress(mac);
 	W5100.setIPAddress(IPAddress(0,0,0,0).raw_address());
@@ -60,7 +60,7 @@ void EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress g
 
 void EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress gateway, IPAddress subnet)
 {
-	W5100.init();
+	if (W5100.init() == 0) return;
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
 	W5100.setMACAddress(mac);
 #if ARDUINO > 106 || TEENSYDUINO > 121
