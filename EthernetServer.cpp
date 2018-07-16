@@ -21,8 +21,14 @@ EthernetClient EthernetServer::available()
 {
 	bool listening = false;
 	uint8_t sockindex = MAX_SOCK_NUM;
+	uint8_t chip, maxindex=MAX_SOCK_NUM;
 
-	for (uint8_t i=0; i < MAX_SOCK_NUM; i++) {
+	chip = W5100.getChip();
+	if (!chip) return EthernetClient(MAX_SOCK_NUM);
+#if MAX_SOCK_NUM > 4
+	if (chip == 51) maxindex = 4; // W5100 chip never supports more than 4 sockets
+#endif
+	for (uint8_t i=0; i < maxindex; i++) {
 		if (server_port[i] == _port) {
 			uint8_t stat = Ethernet.socketStatus(i);
 			if (stat == SnSR::ESTABLISHED || stat == SnSR::CLOSE_WAIT) {

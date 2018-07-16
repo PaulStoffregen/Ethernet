@@ -291,7 +291,8 @@ private:
   static uint8_t isW5500(void);
 
 public:
-  // TODO: auto-configure SSIZE, SMASK
+  static uint8_t getChip(void) { return chip; }
+  // TODO: auto-configure SSIZE, SMASK based on MAX_SOCK_NUM
   static const uint16_t SSIZE = 2048;
   static const uint16_t SMASK = 0x07FF;
   static uint16_t SBASE(uint8_t socknum) {

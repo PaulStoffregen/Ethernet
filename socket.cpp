@@ -42,18 +42,24 @@ void EthernetClass::socketPortRand(uint16_t n)
 
 uint8_t EthernetClass::socketBegin(uint8_t protocol, uint16_t port)
 {
-	uint8_t s, status[MAX_SOCK_NUM];
+	uint8_t s, status[MAX_SOCK_NUM], chip, maxindex=MAX_SOCK_NUM;
 
+	// first check hardware compatibility
+	chip = W5100.getChip();
+	if (!chip) return MAX_SOCK_NUM; // immediate error if no hardware detected
+#if MAX_SOCK_NUM > 4
+	if (chip == 51) maxindex = 4; // W5100 chip never supports more than 4 sockets
+#endif
 	//Serial.printf("W5000socket begin, protocol=%d, port=%d\n", protocol, port);
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
 	// look at all the hardware sockets, use any that are closed (unused)
-	for (s=0; s < MAX_SOCK_NUM; s++) {
+	for (s=0; s < maxindex; s++) {
 		status[s] = W5100.readSnSR(s);
 		if (status[s] == SnSR::CLOSED) goto makesocket;
 	}
 	//Serial.printf("W5000socket step2\n");
 	// as a last resort, forcibly close any already closing
-	for (s=0; s < MAX_SOCK_NUM; s++) {
+	for (s=0; s < maxindex; s++) {
 		uint8_t stat = status[s];
 		if (stat == SnSR::LAST_ACK) goto closemakesocket;
 		if (stat == SnSR::TIME_WAIT) goto closemakesocket;
@@ -100,18 +106,24 @@ makesocket:
 // multicast version to set fields before open  thd 
 uint8_t EthernetClass::socketBeginMulticast(uint8_t protocol, IPAddress ip, uint16_t port)
 {
-	uint8_t s, status[MAX_SOCK_NUM];
+	uint8_t s, status[MAX_SOCK_NUM], chip, maxindex=MAX_SOCK_NUM;
 
+	// first check hardware compatibility
+	chip = W5100.getChip();
+	if (!chip) return MAX_SOCK_NUM; // immediate error if no hardware detected
+#if MAX_SOCK_NUM > 4
+	if (chip == 51) maxindex = 4; // W5100 chip never supports more than 4 sockets
+#endif
 	//Serial.printf("W5000socket begin, protocol=%d, port=%d\n", protocol, port);
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
 	// look at all the hardware sockets, use any that are closed (unused)
-	for (s=0; s < MAX_SOCK_NUM; s++) {
+	for (s=0; s < maxindex; s++) {
 		status[s] = W5100.readSnSR(s);
 		if (status[s] == SnSR::CLOSED) goto makesocket;
 	}
 	//Serial.printf("W5000socket step2\n");
 	// as a last resort, forcibly close any already closing
-	for (s=0; s < MAX_SOCK_NUM; s++) {
+	for (s=0; s < maxindex; s++) {
 		uint8_t stat = status[s];
 		if (stat == SnSR::LAST_ACK) goto closemakesocket;
 		if (stat == SnSR::TIME_WAIT) goto closemakesocket;

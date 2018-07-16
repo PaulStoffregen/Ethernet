@@ -190,7 +190,7 @@ public:
 	using Print::write;
 
 private:
-	uint8_t sockindex;
+	uint8_t sockindex; // MAX_SOCK_NUM means client not in use
 };
 
 

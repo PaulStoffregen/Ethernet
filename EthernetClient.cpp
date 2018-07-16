@@ -107,7 +107,7 @@ void EthernetClient::stop()
 
 	// if it hasn't closed, close it forcefully
 	Ethernet.socketClose(sockindex);
-    sockindex = MAX_SOCK_NUM;
+	sockindex = MAX_SOCK_NUM;
 }
 
 uint8_t EthernetClient::connected()

@@ -52,7 +52,7 @@
 
 
 // W5100 controller instance
-uint8_t  W5100Class::chip;
+uint8_t  W5100Class::chip = 0;
 uint8_t  W5100Class::CH_BASE_MSB;
 uint8_t  W5100Class::ss_pin = SS_PIN_DEFAULT;
 W5100Class W5100;
