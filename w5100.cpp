@@ -8,6 +8,7 @@
  */
 
 #include <Arduino.h>
+#include "Ethernet.h"
 #include "w5100.h"
 
 //#define W5500_4K_BUFFERS

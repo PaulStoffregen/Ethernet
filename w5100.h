@@ -7,6 +7,9 @@
  * published by the Free Software Foundation.
  */
 
+// w5100.h contains private W5x00 hardware "driver" level definitions
+// which are not meant to be exposed to other libraries or Arduino users
+
 #ifndef	W5100_H_INCLUDED
 #define	W5100_H_INCLUDED
 
@@ -20,7 +23,11 @@
 // uncomment this if you know you'll never need W5100 support
 //#define SPI_ETHERNET_SETTINGS SPISettings(30000000, MSBFIRST, SPI_MODE0)
 
-#define MAX_SOCK_NUM 4
+
+// Require Ethernet.h, because we need MAX_SOCK_NUM
+#ifndef ethernet_h_
+#error "Ethernet.h must be included before w5100.h"
+#endif
 
 
 // Arduino 101's SPI can not run faster than 8 MHz.
@@ -284,8 +291,7 @@ private:
   static uint8_t isW5500(void);
 
 public:
-  // TODO: auto-configure SOCKETS, SSIZE, SMASK
-  static const int SOCKETS = 4;
+  // TODO: auto-configure SSIZE, SMASK
   static const uint16_t SSIZE = 2048;
   static const uint16_t SMASK = 0x07FF;
   static uint16_t SBASE(uint8_t socknum) {
