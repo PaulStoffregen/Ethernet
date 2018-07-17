@@ -44,6 +44,12 @@ int EthernetClient::connect(IPAddress ip, uint16_t port)
 	}
 }
 
+int EthernetClient::availableForWrite(void)
+{
+	if (sockindex >= MAX_SOCK_NUM) return 0;
+	return Ethernet.socketSendAvailable(sockindex);
+}
+
 size_t EthernetClient::write(uint8_t b)
 {
 	return write(&b, 1);

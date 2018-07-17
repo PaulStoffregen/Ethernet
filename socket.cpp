@@ -446,6 +446,19 @@ uint16_t EthernetClass::socketSend(uint8_t s, const uint8_t * buf, uint16_t len)
 	return ret;
 }
 
+uint16_t EthernetClass::socketSendAvailable(uint8_t s)
+{
+	uint8_t status=0;
+	uint16_t freesize=0;
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	freesize = getSnTX_FSR(s);
+	status = W5100.readSnSR(s);
+	SPI.endTransaction();
+	if ((status == SnSR::ESTABLISHED) || (status == SnSR::CLOSE_WAIT)) {
+		return freesize;
+	}
+	return 0;
+}
 
 uint16_t EthernetClass::socketBufferData(uint8_t s, uint16_t offset, const uint8_t* buf, uint16_t len)
 {
