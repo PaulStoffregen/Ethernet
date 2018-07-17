@@ -8,7 +8,11 @@
 // these "friend" classes are now defined in the same header file.  socket.h
 // was removed to avoid possible conflict with the C library header files.
 
+#if defined(RAMEND) && defined(RAMSTART) && ((RAMEND - RAMSTART) <= 2048)
 #define MAX_SOCK_NUM 4
+#else
+#define MAX_SOCK_NUM 8
+#endif
 
 #include <Arduino.h>
 #include "Client.h"
