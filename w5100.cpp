@@ -1,4 +1,5 @@
 /*
+ * Copyright 2018 Paul Stoffregen
  * Copyright (c) 2010 by Cristian Maglie <c.maglie@bug.st>
  *
  * This file is free software; you can redistribute it and/or modify

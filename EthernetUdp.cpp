@@ -31,7 +31,6 @@
 #include "Dns.h"
 #include "w5100.h"
 
-
 /* Start EthernetUDP socket, listening at local port PORT */
 uint8_t EthernetUDP::begin(uint16_t port)
 {
