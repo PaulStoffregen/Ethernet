@@ -5,7 +5,7 @@
 #define Dhcp_h
 
 /* DHCP state machine. */
-#define STATE_DHCP_START 0
+#define STATE_DHCP_START	0
 #define	STATE_DHCP_DISCOVER	1
 #define	STATE_DHCP_REQUEST	2
 #define	STATE_DHCP_LEASED	3
@@ -24,13 +24,13 @@
 
 /* DHCP message type */
 #define	DHCP_DISCOVER		1
-#define DHCP_OFFER		  2
+#define DHCP_OFFER		2
 #define	DHCP_REQUEST		3
 #define	DHCP_DECLINE		4
-#define	DHCP_ACK		    5
-#define DHCP_NAK		    6
+#define	DHCP_ACK		5
+#define DHCP_NAK		6
 #define	DHCP_RELEASE		7
-#define DHCP_INFORM		  8
+#define DHCP_INFORM		8
 
 #define DHCP_HTYPE10MB		1
 #define DHCP_HTYPE100MB		2
@@ -40,7 +40,7 @@
 #define DHCP_SECS		0
 
 #define MAGIC_COOKIE		0x63825363
-#define MAX_DHCP_OPT	16
+#define MAX_DHCP_OPT		16
 
 #define HOST_NAME "WIZnet"
 #define DEFAULT_LEASE	(900) //default lease time in seconds
@@ -132,6 +132,6 @@ typedef struct _RIP_MSG_FIXED
 	uint8_t  siaddr[4];
 	uint8_t  giaddr[4];
 	uint8_t  chaddr[6];
-}RIP_MSG_FIXED;
+} RIP_MSG_FIXED;
 
 #endif
