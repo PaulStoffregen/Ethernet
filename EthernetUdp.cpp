@@ -142,7 +142,7 @@ int EthernetUDP::read()
 	return -1;
 }
 
-int EthernetUDP::read(unsigned char* buffer, size_t len)
+int EthernetUDP::read(unsigned char *buffer, size_t len)
 {
 	if (_remaining > 0) {
 		int got;

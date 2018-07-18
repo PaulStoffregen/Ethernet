@@ -327,7 +327,7 @@ int EthernetClass::socketRecv(uint8_t s, uint8_t *buf, int16_t len)
 	} else {
 		if (ret > len) ret = len; // more data available than buffer length
 		uint16_t ptr = state[s].RX_RD;
-		read_data(s, ptr, buf, ret);
+		if (buf) read_data(s, ptr, buf, ret);
 		ptr += ret;
 		state[s].RX_RD = ptr;
 		state[s].RX_RSR -= ret;
