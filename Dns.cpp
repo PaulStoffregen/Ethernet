@@ -248,14 +248,14 @@ uint16_t DNSClient::ProcessResponse(uint16_t aTimeout, IPAddress& aAddress)
 	if ((iRequestId != (header.word[0])) ||
 	  ((header_flags & QUERY_RESPONSE_MASK) != (uint16_t)RESPONSE_FLAG) ) {
 		// Mark the entire packet as read
-		iUdp.flush();
+		iUdp.flush(); // FIXME
 		return INVALID_RESPONSE;
 	}
 	// Check for any errors in the response (or in our request)
 	// although we don't do anything to get round these
 	if ( (header_flags & TRUNCATION_FLAG) || (header_flags & RESP_MASK) ) {
 		// Mark the entire packet as read
-		iUdp.flush();
+		iUdp.flush(); // FIXME
 		return -5; //INVALID_RESPONSE;
 	}
 
@@ -263,7 +263,7 @@ uint16_t DNSClient::ProcessResponse(uint16_t aTimeout, IPAddress& aAddress)
 	uint16_t answerCount = htons(header.word[3]);
 	if (answerCount == 0) {
 		// Mark the entire packet as read
-		iUdp.flush();
+		iUdp.flush(); // FIXME
 		return -6; //INVALID_RESPONSE;
 	}
 
@@ -276,16 +276,12 @@ uint16_t DNSClient::ProcessResponse(uint16_t aTimeout, IPAddress& aAddress)
 			if (len > 0) {
 				// Don't need to actually read the data out for the string, just
 				// advance ptr to beyond it
-				while(len--) {
-					iUdp.read(); // we don't care about the returned byte
-				}
+				iUdp.read((uint8_t *)NULL, (size_t)len);
 			}
 		} while (len != 0);
 
 		// Now jump over the type and class
-		for (int i=0; i < 4; i++) {
-			iUdp.read(); // we don't care about the returned byte
-		}
+		iUdp.read((uint8_t *)NULL, 4);
 	}
 
 	// Now we're up to the bit we're interested in, the answer
@@ -304,9 +300,7 @@ uint16_t DNSClient::ProcessResponse(uint16_t aTimeout, IPAddress& aAddress)
 					// And it's got a length
 					// Don't need to actually read the data out for the string,
 					// just advance ptr to beyond it
-					while(len--) {
-						iUdp.read(); // we don't care about the returned byte
-					}
+					iUdp.read((uint8_t *)NULL, len);
 				}
 			} else {
 				// This is a pointer to a somewhere else in the message for the
@@ -316,7 +310,7 @@ uint16_t DNSClient::ProcessResponse(uint16_t aTimeout, IPAddress& aAddress)
 				// a pointer.  Either way, when we get here we're at the end of
 				// the name
 				// Skip over the pointer
-				iUdp.read(); // we don't care about the returned byte
+				iUdp.read((uint8_t *)NULL, 1); // we don't care about the byte
 				// And set len so that we drop out of the name loop
 				len = 0;
 			}
@@ -329,9 +323,7 @@ uint16_t DNSClient::ProcessResponse(uint16_t aTimeout, IPAddress& aAddress)
 		iUdp.read((uint8_t*)&answerClass, sizeof(answerClass));
 
 		// Ignore the Time-To-Live as we don't do any caching
-		for (int i=0; i < TTL_SIZE; i++) {
-			iUdp.read(); // we don't care about the returned byte
-		}
+		iUdp.read((uint8_t *)NULL, TTL_SIZE); // don't care about the returned bytes
 
 		// And read out the length of this answer
 		// Don't need header_flags anymore, so we can reuse it here
@@ -341,21 +333,19 @@ uint16_t DNSClient::ProcessResponse(uint16_t aTimeout, IPAddress& aAddress)
 			if (htons(header_flags) != 4) {
 				// It's a weird size
 				// Mark the entire packet as read
-				iUdp.flush();
+				iUdp.flush(); // FIXME
 				return -9;//INVALID_RESPONSE;
 			}
 			iUdp.read(aAddress.raw_address(), 4);
 			return SUCCESS;
 		} else {
 			// This isn't an answer type we're after, move onto the next one
-			for (uint16_t i=0; i < htons(header_flags); i++) {
-				iUdp.read(); // we don't care about the returned byte
-			}
+			iUdp.read((uint8_t *)NULL, htons(header_flags));
 		}
 	}
 
 	// Mark the entire packet as read
-	iUdp.flush();
+	iUdp.flush(); // FIXME
 
 	// If we get here then we haven't found an answer
 	return -10; //INVALID_RESPONSE;

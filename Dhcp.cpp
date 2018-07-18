@@ -23,14 +23,15 @@ int DhcpClass::beginWithDHCP(uint8_t *mac, unsigned long timeout, unsigned long 
 	return request_DHCP_lease();
 }
 
-void DhcpClass::reset_DHCP_lease(){
+void DhcpClass::reset_DHCP_lease()
+{
 	// zero out _dhcpSubnetMask, _dhcpGatewayIp, _dhcpLocalIp, _dhcpDhcpServerIp, _dhcpDnsServerIp
 	memset(_dhcpLocalIp, 0, 20);
 }
 
 	//return:0 on error, 1 if request is sent and response is received
-	int DhcpClass::request_DHCP_lease(){
-
+int DhcpClass::request_DHCP_lease()
+{
 	uint8_t messageType = 0;
 
 	// Pick an initial transaction ID
@@ -83,7 +84,7 @@ void DhcpClass::reset_DHCP_lease(){
 					// T1 should be 50% of _dhcpLeaseTime
 					_dhcpT1 = _dhcpLeaseTime >> 1;
 				}
-				if (_dhcpT2 == 0){
+				if (_dhcpT2 == 0) {
 					// T2 should be 87.5% (7/8ths) of _dhcpLeaseTime
 					_dhcpT2 = _dhcpLeaseTime - (_dhcpLeaseTime >> 3);
 				}
@@ -255,18 +256,14 @@ uint8_t DhcpClass::parseDHCPResponse(unsigned long responseTimeout, uint32_t& tr
 		  (transactionId < _dhcpInitialTransactionId) ||
 		  (transactionId > _dhcpTransactionId)) {
 			// Need to read the rest of the packet here regardless
-			_dhcpUdpSocket.flush();
+			_dhcpUdpSocket.flush(); // FIXME
 			return 0;
 		}
 
 		memcpy(_dhcpLocalIp, fixedMsg.yiaddr, 4);
 
 		// Skip to the option part
-		// Doing this a byte at a time so we don't have to put a big buffer
-		// on the stack (as we don't have lots of memory lying around)
-		for (int i =0; i < (240 - (int)sizeof(RIP_MSG_FIXED)); i++) {
-			_dhcpUdpSocket.read(); // we don't care about the returned byte
-		}
+		_dhcpUdpSocket.read((uint8_t *)NULL, 240 - (int)sizeof(RIP_MSG_FIXED));
 
 		while (_dhcpUdpSocket.available() > 0) {
 			switch (_dhcpUdpSocket.read()) {
@@ -289,30 +286,23 @@ uint8_t DhcpClass::parseDHCPResponse(unsigned long responseTimeout, uint32_t& tr
 			case routersOnSubnet :
 				opt_len = _dhcpUdpSocket.read();
 				_dhcpUdpSocket.read(_dhcpGatewayIp, 4);
-				for (int i = 0; i < opt_len-4; i++) {
-					_dhcpUdpSocket.read();
-				}
+				_dhcpUdpSocket.read((uint8_t *)NULL, opt_len - 4);
 				break;
 
 			case dns :
 				opt_len = _dhcpUdpSocket.read();
 				_dhcpUdpSocket.read(_dhcpDnsServerIp, 4);
-				for (int i = 0; i < opt_len-4; i++) {
-					_dhcpUdpSocket.read();
-				}
+				_dhcpUdpSocket.read((uint8_t *)NULL, opt_len - 4);
 				break;
 
 			case dhcpServerIdentifier :
 				opt_len = _dhcpUdpSocket.read();
-				//if ( *((uint32_t*)_dhcpDhcpServerIp) == 0 ||
 				if ( IPAddress(_dhcpDhcpServerIp) == IPAddress((uint32_t)0) ||
 				  IPAddress(_dhcpDhcpServerIp) == _dhcpUdpSocket.remoteIP() ) {
 					_dhcpUdpSocket.read(_dhcpDhcpServerIp, sizeof(_dhcpDhcpServerIp));
 				} else {
 					// Skip over the rest of this option
-					while (opt_len--) {
-						_dhcpUdpSocket.read();
-					}
+					_dhcpUdpSocket.read((uint8_t *)NULL, opt_len);
 				}
 				break;
 
@@ -338,16 +328,14 @@ uint8_t DhcpClass::parseDHCPResponse(unsigned long responseTimeout, uint32_t& tr
 			default :
 				opt_len = _dhcpUdpSocket.read();
 				// Skip over the rest of this option
-				while (opt_len--) {
-					_dhcpUdpSocket.read();
-				}
+				_dhcpUdpSocket.read((uint8_t *)NULL, opt_len);
 				break;
 			}
 		}
 	}
 
 	// Need to skip to end of the packet regardless here
-	_dhcpUdpSocket.flush();
+	_dhcpUdpSocket.flush(); // FIXME
 
 	return type;
 }

@@ -103,7 +103,7 @@ int EthernetUDP::parsePacket()
 		// could this fail (loop endlessly) if _remaining > 0 and recv in read fails?
 		// should only occur if recv fails after telling us the data is there, lets
 		// hope the w5100 always behaves :)
-		read();
+		read((uint8_t *)NULL, _remaining);
 	}
 
 	if (Ethernet.socketRecvAvailable(sockindex) > 0) {
