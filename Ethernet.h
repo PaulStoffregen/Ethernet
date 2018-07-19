@@ -181,6 +181,7 @@ public:
 	virtual IPAddress remoteIP() { return _remoteIP; };
 	// Return the port of the host who sent the current incoming packet
 	virtual uint16_t remotePort() { return _remotePort; };
+	virtual uint16_t localPort() { return _port; }
 };
 
 
@@ -188,8 +189,8 @@ public:
 
 class EthernetClient : public Client {
 public:
-	EthernetClient() : sockindex(MAX_SOCK_NUM) { }
-	EthernetClient(uint8_t s) : sockindex(s) { }
+	EthernetClient() : sockindex(MAX_SOCK_NUM), _timeout(1000) { }
+	EthernetClient(uint8_t s) : sockindex(s), _timeout(1000) { }
 
 	uint8_t status();
 	virtual int connect(IPAddress ip, uint16_t port);
@@ -210,6 +211,10 @@ public:
 	virtual bool operator==(const EthernetClient&);
 	virtual bool operator!=(const EthernetClient& rhs) { return !this->operator==(rhs); }
 	uint8_t getSocketNumber() const { return sockindex; }
+	virtual uint16_t localPort();
+	virtual IPAddress remoteIP();
+	virtual uint16_t remotePort();
+	virtual void setClientTimeout(uint16_t timeout) { _timeout = timeout; }
 
 	friend class EthernetServer;
 
@@ -217,6 +222,7 @@ public:
 
 private:
 	uint8_t sockindex; // MAX_SOCK_NUM means client not in use
+	uint16_t _timeout;
 };
 
 
