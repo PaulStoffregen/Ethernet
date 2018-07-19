@@ -80,6 +80,8 @@ public:
 	void setSubnetMask(const IPAddress subnet);
 	void setGatewayIP(const IPAddress gateway);
 	void setDnsServerIP(const IPAddress dns_server) { _dnsServerAddress = dns_server; }
+	void setRetransmissionTimeout(uint16_t milliseconds);
+	void setRetransmissionCount(uint8_t num);
 
 	friend class EthernetClient;
 	friend class EthernetServer;

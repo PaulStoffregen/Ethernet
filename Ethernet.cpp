@@ -205,6 +205,21 @@ void EthernetClass::setGatewayIP(const IPAddress gateway)
 	SPI.endTransaction();
 }
 
+void EthernetClass::setRetransmissionTimeout(uint16_t milliseconds)
+{
+	if (milliseconds > 6553) milliseconds = 6553;
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	W5100.setRetransmissionTime(milliseconds * 10);
+	SPI.endTransaction();
+}
+
+void EthernetClass::setRetransmissionCount(uint8_t num)
+{
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	W5100.setRetransmissionCount(num);
+	SPI.endTransaction();
+}
+
 
 
 
