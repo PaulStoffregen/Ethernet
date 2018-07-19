@@ -71,7 +71,8 @@ void setup() {
 
   // if you get a connection, report back via serial:
   if (client.connect(server, 80)) {
-    Serial.println("connected");
+    Serial.print("connected to ");
+    Serial.println(client.remoteIP());
     // Make a HTTP request:
     client.println("GET /search?q=arduino HTTP/1.1");
     client.println("Host: www.google.com");

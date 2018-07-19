@@ -175,7 +175,11 @@ bool EthernetClient::operator==(const EthernetClient& rhs)
 uint16_t EthernetClient::localPort()
 {
 	if (sockindex >= MAX_SOCK_NUM) return 0;
-	return W5100.readSnPORT(sockindex);
+	uint16_t port;
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	port = W5100.readSnPORT(sockindex);
+	SPI.endTransaction();
+	return port;
 }
 
 // https://github.com/per1234/EthernetMod
@@ -184,15 +188,22 @@ IPAddress EthernetClient::remoteIP()
 {
 	if (sockindex >= MAX_SOCK_NUM) return IPAddress((uint32_t)0);
 	uint8_t remoteIParray[4];
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
 	W5100.readSnDIPR(sockindex, remoteIParray);
+	SPI.endTransaction();
 	return IPAddress(remoteIParray);
 }
 
 // https://github.com/per1234/EthernetMod
 // from: https://github.com/ntruchsess/Arduino-1/commit/ca37de4ba4ecbdb941f14ac1fe7dd40f3008af75
-uint16_t EthernetClient::remotePort() {
+uint16_t EthernetClient::remotePort()
+{
 	if (sockindex >= MAX_SOCK_NUM) return 0;
-	return W5100.readSnDPORT(sockindex);
+	uint16_t port;
+	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+	port = W5100.readSnDPORT(sockindex);
+	SPI.endTransaction();
+	return port;
 }
 
 
