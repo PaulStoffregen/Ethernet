@@ -294,8 +294,13 @@ private:
 public:
   static uint8_t getChip(void) { return chip; }
   // TODO: auto-configure SSIZE, SMASK based on MAX_SOCK_NUM
+#ifdef ETHERNET_LARGE_BUFFERS
+  static uint16_t SSIZE;
+  static uint16_t SMASK;
+#else
   static const uint16_t SSIZE = 2048;
   static const uint16_t SMASK = 0x07FF;
+#endif
   static uint16_t SBASE(uint8_t socknum) {
     if (chip == 51) {
       return socknum * SSIZE + 0x4000;

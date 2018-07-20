@@ -28,11 +28,25 @@
 // these "friend" classes are now defined in the same header file.  socket.h
 // was removed to avoid possible conflict with the C library header files.
 
+
+// Configure the maximum number of sockets to support.  W5100 chips can have
+// up to 4 sockets.  W5200 & W5500 can have up to 8 sockets.  Several bytes
+// of RAM are used for each socket.  Reducing the maximum can save RAM, but
+// you are limited to fewer simultaneous connections.
 #if defined(RAMEND) && defined(RAMSTART) && ((RAMEND - RAMSTART) <= 2048)
 #define MAX_SOCK_NUM 4
 #else
 #define MAX_SOCK_NUM 8
 #endif
+
+// By default, each socket uses 2K buffers inside the Wiznet chip.  If
+// MAX_SOCK_NUM is set to fewer than the chip's maximum, uncommenting
+// this will use larger buffers within the Wiznet chip.  Large buffers
+// can really help with UDP protocols like Artnet.  In theory larger
+// buffers should allow faster TCP over high-latency links, but this
+// does not always seem to work in practice (maybe Wiznet bugs?)
+//#define ETHERNET_LARGE_BUFFERS
+
 
 #include <Arduino.h>
 #include "Client.h"

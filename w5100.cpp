@@ -12,9 +12,6 @@
 #include "Ethernet.h"
 #include "w5100.h"
 
-//#define W5500_4K_BUFFERS
-//#define W5200_4K_BUFFERS
-
 
 /***************************************************/
 /**            Default SS pin setting             **/
@@ -56,6 +53,10 @@
 uint8_t  W5100Class::chip = 0;
 uint8_t  W5100Class::CH_BASE_MSB;
 uint8_t  W5100Class::ss_pin = SS_PIN_DEFAULT;
+#ifdef ETHERNET_LARGE_BUFFERS
+uint16_t W5100Class::SSIZE = 2048;
+uint16_t W5100Class::SMASK = 0x07FF;
+#endif
 W5100Class W5100;
 
 // pointers and bitmasks for optimized SS pin
@@ -111,6 +112,18 @@ uint8_t W5100Class::init(void)
 	// where it won't recover, unless given a reset pulse.
 	if (isW5200()) {
 		CH_BASE_MSB = 0x40;
+#ifdef ETHERNET_LARGE_BUFFERS
+#if MAX_SOCK_NUM <= 1
+		SSIZE = 16384;
+#elif MAX_SOCK_NUM <= 2
+		SSIZE = 8192;
+#elif MAX_SOCK_NUM <= 4
+		SSIZE = 4096;
+#else
+		SSIZE = 2048;
+#endif
+		SMASK = SSIZE - 1;
+#endif
 		for (i=0; i<MAX_SOCK_NUM; i++) {
 			writeSnRX_SIZE(i, SSIZE >> 10);
 			writeSnTX_SIZE(i, SSIZE >> 10);
@@ -124,7 +137,17 @@ uint8_t W5100Class::init(void)
 	// so try it after the fragile W5200
 	} else if (isW5500()) {
 		CH_BASE_MSB = 0x10;
-		#ifdef W5500_4K_BUFFERS
+#ifdef ETHERNET_LARGE_BUFFERS
+#if MAX_SOCK_NUM <= 1
+		SSIZE = 16384;
+#elif MAX_SOCK_NUM <= 2
+		SSIZE = 8192;
+#elif MAX_SOCK_NUM <= 4
+		SSIZE = 4096;
+#else
+		SSIZE = 2048;
+#endif
+		SMASK = SSIZE - 1;
 		for (i=0; i<MAX_SOCK_NUM; i++) {
 			writeSnRX_SIZE(i, SSIZE >> 10);
 			writeSnTX_SIZE(i, SSIZE >> 10);
@@ -133,7 +156,7 @@ uint8_t W5100Class::init(void)
 			writeSnRX_SIZE(i, 0);
 			writeSnTX_SIZE(i, 0);
 		}
-		#endif
+#endif
 	// Try W5100 last.  This simple chip uses fixed 4 byte frames
 	// for every 8 bit access.  Terribly inefficient, but so simple
 	// it recovers from "hearing" unsuccessful W5100 or W5200
@@ -141,8 +164,25 @@ uint8_t W5100Class::init(void)
 	// register for identification, so we check this last.
 	} else if (isW5100()) {
 		CH_BASE_MSB = 0x04;
+#ifdef ETHERNET_LARGE_BUFFERS
+#if MAX_SOCK_NUM <= 1
+		SSIZE = 8192;
+		writeTMSR(0x03);
+		writeRMSR(0x03);
+#elif MAX_SOCK_NUM <= 2
+		SSIZE = 4096;
+		writeTMSR(0x0A);
+		writeRMSR(0x0A);
+#else
+		SSIZE = 2048;
 		writeTMSR(0x55);
 		writeRMSR(0x55);
+#endif
+		SMASK = SSIZE - 1;
+#else
+		writeTMSR(0x55);
+		writeRMSR(0x55);
+#endif
 	// No hardware seems to be present.  Or it could be a W5200
 	// that's heard other SPI communication if its chip select
 	// pin wasn't high when a SD card or other SPI chip was used.
@@ -282,7 +322,7 @@ uint16_t W5100Class::write(uint16_t addr, const uint8_t *buf, uint16_t len)
 		}
 #endif
 		resetSS();
-	} else {
+	} else { // chip == 55
 		setSS();
 		if (addr < 0x100) {
 			// common registers 00nn
@@ -299,23 +339,31 @@ uint16_t W5100Class::write(uint16_t addr, const uint8_t *buf, uint16_t len)
 			//  10## #nnn nnnn nnnn
 			cmd[0] = addr >> 8;
 			cmd[1] = addr & 0xFF;
-			#ifdef W5500_4K_BUFFERS
-			cmd[2] = ((addr >> 7) & 0x60) | 0x14;
+			#if defined(ETHERNET_LARGE_BUFFERS) && MAX_SOCK_NUM <= 1
+			cmd[2] = 0x14;                       // 16K buffers
+			#elif defined(ETHERNET_LARGE_BUFFERS) && MAX_SOCK_NUM <= 2
+			cmd[2] = ((addr >> 8) & 0x20) | 0x14; // 8K buffers
+			#elif defined(ETHERNET_LARGE_BUFFERS) && MAX_SOCK_NUM <= 4
+			cmd[2] = ((addr >> 7) & 0x60) | 0x14; // 4K buffers
 			#else
-			cmd[2] = ((addr >> 6) & 0xE0) | 0x14;
+			cmd[2] = ((addr >> 6) & 0xE0) | 0x14; // 2K buffers
 			#endif
 		} else {
 			// receive buffers
 			cmd[0] = addr >> 8;
 			cmd[1] = addr & 0xFF;
-			#ifdef W5500_4K_BUFFERS
-			cmd[2] = ((addr >> 7) & 0x60) | 0x1C;
+			#if defined(ETHERNET_LARGE_BUFFERS) && MAX_SOCK_NUM <= 1
+			cmd[2] = 0x1C;                       // 16K buffers
+			#elif defined(ETHERNET_LARGE_BUFFERS) && MAX_SOCK_NUM <= 2
+			cmd[2] = ((addr >> 8) & 0x20) | 0x1C; // 8K buffers
+			#elif defined(ETHERNET_LARGE_BUFFERS) && MAX_SOCK_NUM <= 4
+			cmd[2] = ((addr >> 7) & 0x60) | 0x1C; // 4K buffers
 			#else
-			cmd[2] = ((addr >> 6) & 0xE0) | 0x1C;
+			cmd[2] = ((addr >> 6) & 0xE0) | 0x1C; // 2K buffers
 			#endif
 		}
 		if (len <= 5) {
-			for (uint16_t i=0; i < len; i++) {
+			for (uint8_t i=0; i < len; i++) {
 				cmd[i + 3] = buf[i];
 			}
 			SPI.transfer(cmd, len + 3);
@@ -369,7 +417,7 @@ uint16_t W5100Class::read(uint16_t addr, uint8_t *buf, uint16_t len)
 		memset(buf, 0, len);
 		SPI.transfer(buf, len);
 		resetSS();
-	} else {
+	} else { // chip == 55
 		setSS();
 		if (addr < 0x100) {
 			// common registers 00nn
@@ -386,19 +434,27 @@ uint16_t W5100Class::read(uint16_t addr, uint8_t *buf, uint16_t len)
 			//  10## #nnn nnnn nnnn
 			cmd[0] = addr >> 8;
 			cmd[1] = addr & 0xFF;
-			#ifdef W5500_4K_BUFFERS
-			cmd[2] = ((addr >> 7) & 0x60) | 0x10;
+			#if defined(ETHERNET_LARGE_BUFFERS) && MAX_SOCK_NUM <= 1
+			cmd[2] = 0x10;                       // 16K buffers
+			#elif defined(ETHERNET_LARGE_BUFFERS) && MAX_SOCK_NUM <= 2
+			cmd[2] = ((addr >> 8) & 0x20) | 0x10; // 8K buffers
+			#elif defined(ETHERNET_LARGE_BUFFERS) && MAX_SOCK_NUM <= 4
+			cmd[2] = ((addr >> 7) & 0x60) | 0x10; // 4K buffers
 			#else
-			cmd[2] = ((addr >> 6) & 0xE0) | 0x10;
+			cmd[2] = ((addr >> 6) & 0xE0) | 0x10; // 2K buffers
 			#endif
 		} else {
 			// receive buffers
 			cmd[0] = addr >> 8;
 			cmd[1] = addr & 0xFF;
-			#ifdef W5500_4K_BUFFERS
-			cmd[2] = ((addr >> 7) & 0x60) | 0x18;
+			#if defined(ETHERNET_LARGE_BUFFERS) && MAX_SOCK_NUM <= 1
+			cmd[2] = 0x18;                       // 16K buffers
+			#elif defined(ETHERNET_LARGE_BUFFERS) && MAX_SOCK_NUM <= 2
+			cmd[2] = ((addr >> 8) & 0x20) | 0x18; // 8K buffers
+			#elif defined(ETHERNET_LARGE_BUFFERS) && MAX_SOCK_NUM <= 4
+			cmd[2] = ((addr >> 7) & 0x60) | 0x18; // 4K buffers
 			#else
-			cmd[2] = ((addr >> 6) & 0xE0) | 0x18;
+			cmd[2] = ((addr >> 6) & 0xE0) | 0x18; // 2K buffers
 			#endif
 		}
 		SPI.transfer(cmd, 3);
