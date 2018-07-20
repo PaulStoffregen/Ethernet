@@ -30,7 +30,7 @@ int EthernetClient::connect(const char * host, uint16_t port)
 
 	if (sockindex < MAX_SOCK_NUM) {
 		if (Ethernet.socketStatus(sockindex) != SnSR::CLOSED) {
-			Ethernet.socketDisconnect(sockindex);
+			Ethernet.socketDisconnect(sockindex); // TODO: should we call stop()?
 		}
 		sockindex = MAX_SOCK_NUM;
 	}
@@ -43,7 +43,7 @@ int EthernetClient::connect(IPAddress ip, uint16_t port)
 {
 	if (sockindex < MAX_SOCK_NUM) {
 		if (Ethernet.socketStatus(sockindex) != SnSR::CLOSED) {
-			Ethernet.socketDisconnect(sockindex);
+			Ethernet.socketDisconnect(sockindex); // TODO: should we call stop()?
 		}
 		sockindex = MAX_SOCK_NUM;
 	}
