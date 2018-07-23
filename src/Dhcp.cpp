@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include "Ethernet.h"
 #include "Dhcp.h"
-#include "w5100.h"
+#include "utility/w5100.h"
 
 int DhcpClass::beginWithDHCP(uint8_t *mac, unsigned long timeout, unsigned long responseTimeout)
 {

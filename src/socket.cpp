@@ -20,7 +20,7 @@
 
 #include <Arduino.h>
 #include "Ethernet.h"
-#include "w5100.h"
+#include "utility/w5100.h"
 
 #if ARDUINO >= 156 && !defined(ARDUINO_ARCH_PIC32)
 extern void yield(void);

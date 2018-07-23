@@ -20,7 +20,7 @@
 
 #include <Arduino.h>
 #include "Ethernet.h"
-#include "w5100.h"
+#include "utility/w5100.h"
 #include "Dhcp.h"
 
 IPAddress EthernetClass::_dnsServerAddress;

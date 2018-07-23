@@ -5,7 +5,7 @@
 #include <Arduino.h>
 #include "Ethernet.h"
 #include "Dns.h"
-#include "w5100.h"
+#include "utility/w5100.h"
 
 
 #define SOCKET_NONE              255
