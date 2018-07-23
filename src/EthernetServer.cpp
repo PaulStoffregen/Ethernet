@@ -72,7 +72,7 @@ EthernetClient EthernetServer::available()
 	return EthernetClient(sockindex);
 }
 
-EthernetClient EthernetServer::connected()
+EthernetClient EthernetServer::accept()
 {
 	bool listening = false;
 	uint8_t sockindex = MAX_SOCK_NUM;
@@ -86,11 +86,13 @@ EthernetClient EthernetServer::connected()
 	for (uint8_t i=0; i < maxindex; i++) {
 		if (server_port[i] == _port) {
 			uint8_t stat = Ethernet.socketStatus(i);
-			if (stat == SnSR::ESTABLISHED || stat == SnSR::CLOSE_WAIT) {
+			if (sockindex == MAX_SOCK_NUM &&
+			  (stat == SnSR::ESTABLISHED || stat == SnSR::CLOSE_WAIT)) {
 				// Return the connected client even if no data received.
 				// Some protocols like FTP expect the server to send the
-				// first data.  Use EthernetServer.connected() for those.
+				// first data.
 				sockindex = i;
+				server_port[i] = 0; // only return the client once
 			} else if (stat == SnSR::LISTEN) {
 				listening = true;
 			} else if (stat == SnSR::CLOSED) {

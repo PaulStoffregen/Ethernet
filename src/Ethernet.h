@@ -256,7 +256,7 @@ private:
 public:
 	EthernetServer(uint16_t port) : _port(port) { }
 	EthernetClient available();
-	EthernetClient connected();
+	EthernetClient accept();
 	virtual void begin();
 	virtual size_t write(uint8_t);
 	virtual size_t write(const uint8_t *buf, size_t size);
