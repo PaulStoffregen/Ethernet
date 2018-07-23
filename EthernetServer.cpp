@@ -102,6 +102,22 @@ EthernetClient EthernetServer::connected()
 	return EthernetClient(sockindex);
 }
 
+EthernetServer::operator bool()
+{
+	uint8_t maxindex=MAX_SOCK_NUM;
+#if MAX_SOCK_NUM > 4
+	if (W5100.getChip() == 51) maxindex = 4; // W5100 chip never supports more than 4 sockets
+#endif
+	for (uint8_t i=0; i < maxindex; i++) {
+		if (server_port[i] == _port) {
+			if (Ethernet.socketStatus(i) == SnSR::LISTEN) {
+				return true; // server is listening for incoming clients
+			}
+		}
+	}
+	return false;
+}
+
 #if 0
 void EthernetServer::statusreport()
 {
