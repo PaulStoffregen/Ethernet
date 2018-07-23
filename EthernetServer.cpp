@@ -72,6 +72,36 @@ EthernetClient EthernetServer::available()
 	return EthernetClient(sockindex);
 }
 
+EthernetClient EthernetServer::connected()
+{
+	bool listening = false;
+	uint8_t sockindex = MAX_SOCK_NUM;
+	uint8_t chip, maxindex=MAX_SOCK_NUM;
+
+	chip = W5100.getChip();
+	if (!chip) return EthernetClient(MAX_SOCK_NUM);
+#if MAX_SOCK_NUM > 4
+	if (chip == 51) maxindex = 4; // W5100 chip never supports more than 4 sockets
+#endif
+	for (uint8_t i=0; i < maxindex; i++) {
+		if (server_port[i] == _port) {
+			uint8_t stat = Ethernet.socketStatus(i);
+			if (stat == SnSR::ESTABLISHED || stat == SnSR::CLOSE_WAIT) {
+				// Return the connected client even if no data received.
+				// Some protocols like FTP expect the server to send the
+				// first data.  Use EthernetServer.connected() for those.
+				sockindex = i;
+			} else if (stat == SnSR::LISTEN) {
+				listening = true;
+			} else if (stat == SnSR::CLOSED) {
+				server_port[i] = 0;
+			}
+		}
+	}
+	if (!listening) begin();
+	return EthernetClient(sockindex);
+}
+
 #if 0
 void EthernetServer::statusreport()
 {

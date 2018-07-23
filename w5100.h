@@ -296,7 +296,6 @@ private:
 
 public:
   static uint8_t getChip(void) { return chip; }
-  // TODO: auto-configure SSIZE, SMASK based on MAX_SOCK_NUM
 #ifdef ETHERNET_LARGE_BUFFERS
   static uint16_t SSIZE;
   static uint16_t SMASK;
