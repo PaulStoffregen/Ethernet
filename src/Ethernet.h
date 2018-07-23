@@ -59,6 +59,13 @@ enum EthernetLinkStatus {
 	LinkOFF
 };
 
+enum EthernetHardwareStatus {
+	EthernetNoHardware,
+	EthernetW5100,
+	EthernetW5200,
+	EthernetW5500
+};
+
 class EthernetUDP;
 class EthernetClient;
 class EthernetServer;
@@ -75,6 +82,7 @@ public:
 	static int begin(uint8_t *mac, unsigned long timeout = 60000, unsigned long responseTimeout = 4000);
 	static int maintain();
 	static EthernetLinkStatus linkStatus();
+	static EthernetHardwareStatus hardwareStatus();
 
 	// Manaul configuration
 	static void begin(uint8_t *mac, IPAddress ip);
