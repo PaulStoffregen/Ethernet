@@ -160,8 +160,15 @@ size_t EthernetServer::write(uint8_t b)
 
 size_t EthernetServer::write(const uint8_t *buffer, size_t size) 
 {
+	uint8_t chip, maxindex=MAX_SOCK_NUM;
+
+	chip = W5100.getChip();
+	if (!chip) return 0;
+#if MAX_SOCK_NUM > 4
+	if (chip == 51) maxindex = 4; // W5100 chip never supports more than 4 sockets
+#endif
 	available();
-	for (uint8_t i=0; i < MAX_SOCK_NUM; i++) {
+	for (uint8_t i=0; i < maxindex; i++) {
 		if (server_port[i] == _port) {
 			if (Ethernet.socketStatus(i) == SnSR::ESTABLISHED) {
 				Ethernet.socketSend(i, buffer, size);
