@@ -230,7 +230,7 @@ public:
 	virtual uint16_t localPort();
 	virtual IPAddress remoteIP();
 	virtual uint16_t remotePort();
-	virtual void setClientTimeout(uint16_t timeout) { _timeout = timeout; }
+	virtual void setConnectionTimeout(uint16_t timeout) { _timeout = timeout; }
 
 	friend class EthernetServer;
 
