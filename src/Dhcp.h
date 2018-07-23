@@ -120,8 +120,8 @@ enum
 
 typedef struct _RIP_MSG_FIXED
 {
-	uint8_t  op; 
-	uint8_t  htype; 
+	uint8_t  op;
+	uint8_t  htype;
 	uint8_t  hlen;
 	uint8_t  hops;
 	uint32_t xid;

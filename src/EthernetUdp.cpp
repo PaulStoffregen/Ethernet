@@ -1,7 +1,7 @@
 /*
  *  Udp.cpp: Library to send/receive UDP packets with the Arduino ethernet shield.
  *  This version only offers minimal wrapping of socket.cpp
- *  Drop Udp.h/.cpp into the Ethernet library directory at hardware/libraries/Ethernet/ 
+ *  Drop Udp.h/.cpp into the Ethernet library directory at hardware/libraries/Ethernet/
  *
  * MIT License:
  * Copyright (c) 2008 Bjoern Hartmann
@@ -11,10 +11,10 @@
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -109,7 +109,7 @@ int EthernetUDP::parsePacket()
 	if (Ethernet.socketRecvAvailable(sockindex) > 0) {
 		//HACK - hand-parse the UDP packet using TCP recv method
 		uint8_t tmpBuf[8];
-		int ret=0; 
+		int ret=0;
 		//read 8 header bytes and get IP and port from it
 		ret = Ethernet.socketRecv(sockindex, tmpBuf, 8);
 		if (ret > 0) {
@@ -150,7 +150,7 @@ int EthernetUDP::read(unsigned char *buffer, size_t len)
 			// data should fit in the buffer
 			got = Ethernet.socketRecv(sockindex, buffer, _remaining);
 		} else {
-			// too much data for the buffer, 
+			// too much data for the buffer,
 			// grab as much as will fit
 			got = Ethernet.socketRecv(sockindex, buffer, len);
 		}

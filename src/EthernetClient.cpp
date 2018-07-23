@@ -148,7 +148,7 @@ void EthernetClient::stop()
 uint8_t EthernetClient::connected()
 {
 	if (sockindex >= MAX_SOCK_NUM) return 0;
-  
+
 	uint8_t s = Ethernet.socketStatus(sockindex);
 	return !(s == SnSR::LISTEN || s == SnSR::CLOSED || s == SnSR::FIN_WAIT ||
 		(s == SnSR::CLOSE_WAIT && !available()));

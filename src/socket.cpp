@@ -123,7 +123,7 @@ makesocket:
 	return s;
 }
 
-// multicast version to set fields before open  thd 
+// multicast version to set fields before open  thd
 uint8_t EthernetClass::socketBeginMulticast(uint8_t protocol, IPAddress ip, uint16_t port)
 {
 	uint8_t s, status[MAX_SOCK_NUM], chip, maxindex=MAX_SOCK_NUM;

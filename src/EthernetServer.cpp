@@ -153,12 +153,12 @@ void EthernetServer::statusreport()
 }
 #endif
 
-size_t EthernetServer::write(uint8_t b) 
+size_t EthernetServer::write(uint8_t b)
 {
 	return write(&b, 1);
 }
 
-size_t EthernetServer::write(const uint8_t *buffer, size_t size) 
+size_t EthernetServer::write(const uint8_t *buffer, size_t size)
 {
 	uint8_t chip, maxindex=MAX_SOCK_NUM;
 
