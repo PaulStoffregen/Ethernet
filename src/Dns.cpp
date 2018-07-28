@@ -85,7 +85,7 @@ int DNSClient::inet_aton(const char* address, IPAddress& result)
 	return 1;
 }
 
-int DNSClient::getHostByName(const char* aHostname, IPAddress& aResult)
+int DNSClient::getHostByName(const char* aHostname, IPAddress& aResult, uint16_t timeout)
 {
 	int ret = 0;
 
@@ -118,7 +118,7 @@ int DNSClient::getHostByName(const char* aHostname, IPAddress& aResult)
 					int wait_retries = 0;
 					ret = TIMED_OUT;
 					while ((wait_retries < 3) && (ret == TIMED_OUT)) {
-						ret = ProcessResponse(5000, aResult);
+						ret = ProcessResponse(timeout, aResult);
 						wait_retries++;
 					}
 				}
@@ -336,6 +336,7 @@ uint16_t DNSClient::ProcessResponse(uint16_t aTimeout, IPAddress& aAddress)
 				iUdp.flush(); // FIXME
 				return -9;//INVALID_RESPONSE;
 			}
+			// FIXME: seeems to lock up here on ESP8266, but why??
 			iUdp.read(aAddress.raw_address(), 4);
 			return SUCCESS;
 		} else {
