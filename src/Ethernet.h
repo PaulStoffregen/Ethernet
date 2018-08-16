@@ -47,6 +47,9 @@
 // does not always seem to work in practice (maybe Wiznet bugs?)
 //#define ETHERNET_LARGE_BUFFERS
 
+// This is used to check from outside, if there is a function 
+// to set the hostname in the library. Inside the library it is not used.
+#define SET_HOSTNAME_AVAILABLE
 
 #include <Arduino.h>
 #include "Client.h"
