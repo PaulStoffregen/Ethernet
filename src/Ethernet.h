@@ -1,18 +1,71 @@
+/* Copyright 2018 Paul Stoffregen
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this
+ * software and associated documentation files (the "Software"), to deal in the Software
+ * without restriction, including without limitation the rights to use, copy, modify,
+ * merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+ * PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 #ifndef ethernet_h_
 #define ethernet_h_
 
 // All symbols exposed to Arduino sketches are contained in this header file
+//
+// Older versions had much of this stuff in EthernetClient.h, EthernetServer.h,
+// and socket.h.  Including headers in different order could cause trouble, so
+// these "friend" classes are now defined in the same header file.  socket.h
+// was removed to avoid possible conflict with the C library header files.
 
+
+// Configure the maximum number of sockets to support.  W5100 chips can have
+// up to 4 sockets.  W5200 & W5500 can have up to 8 sockets.  Several bytes
+// of RAM are used for each socket.  Reducing the maximum can save RAM, but
+// you are limited to fewer simultaneous connections.
+#if defined(RAMEND) && defined(RAMSTART) && ((RAMEND - RAMSTART) <= 2048)
 #define MAX_SOCK_NUM 4
+#else
+#define MAX_SOCK_NUM 8
+#endif
 
-#include <inttypes.h>
-#include "Arduino.h"
-#include "Print.h"
-#include "IPAddress.h"
+// By default, each socket uses 2K buffers inside the Wiznet chip.  If
+// MAX_SOCK_NUM is set to fewer than the chip's maximum, uncommenting
+// this will use larger buffers within the Wiznet chip.  Large buffers
+// can really help with UDP protocols like Artnet.  In theory larger
+// buffers should allow faster TCP over high-latency links, but this
+// does not always seem to work in practice (maybe Wiznet bugs?)
+//#define ETHERNET_LARGE_BUFFERS
+
+
+#include <Arduino.h>
 #include "Client.h"
 #include "Server.h"
 #include "Udp.h"
 #include "Dhcp.h"
+
+enum EthernetLinkStatus {
+	Unknown,
+	LinkON,
+	LinkOFF
+};
+
+enum EthernetHardwareStatus {
+	EthernetNoHardware,
+	EthernetW5100,
+	EthernetW5200,
+	EthernetW5500
+};
 
 class EthernetUDP;
 class EthernetClient;
@@ -29,6 +82,8 @@ public:
 	// Returns 0 if the DHCP configuration failed, and 1 if it succeeded
 	static int begin(uint8_t *mac, unsigned long timeout = 60000, unsigned long responseTimeout = 4000);
 	static int maintain();
+	static EthernetLinkStatus linkStatus();
+	static EthernetHardwareStatus hardwareStatus();
 
 	// Manaul configuration
 	static void begin(uint8_t *mac, IPAddress ip);
@@ -36,16 +91,26 @@ public:
 	static void begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress gateway);
 	static void begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress gateway, IPAddress subnet);
 	static void init(uint8_t sspin = 10);
+
+	static void MACAddress(uint8_t *mac_address);
 	static IPAddress localIP();
 	static IPAddress subnetMask();
 	static IPAddress gatewayIP();
 	static IPAddress dnsServerIP() { return _dnsServerAddress; }
 
+	void setMACAddress(const uint8_t *mac_address);
+	void setLocalIP(const IPAddress local_ip);
+	void setSubnetMask(const IPAddress subnet);
+	void setGatewayIP(const IPAddress gateway);
+	void setDnsServerIP(const IPAddress dns_server) { _dnsServerAddress = dns_server; }
+	void setRetransmissionTimeout(uint16_t milliseconds);
+	void setRetransmissionCount(uint8_t num);
+
 	friend class EthernetClient;
 	friend class EthernetServer;
 	friend class EthernetUDP;
 
-	static void setHostName(char * newHostName);
+	static void setHostName(const char * newHostName);
 	static char * getHostName();
 
 private:
@@ -63,22 +128,23 @@ private:
 	static uint8_t socketListen(uint8_t s);
 	// Send data (TCP)
 	static uint16_t socketSend(uint8_t s, const uint8_t * buf, uint16_t len);
+	static uint16_t socketSendAvailable(uint8_t s);
 	// Receive data (TCP)
 	static int socketRecv(uint8_t s, uint8_t * buf, int16_t len);
 	static uint16_t socketRecvAvailable(uint8_t s);
 	static uint8_t socketPeek(uint8_t s);
 	// sets up a UDP datagram, the data for which will be provided by one
 	// or more calls to bufferData and then finally sent with sendUDP.
-	// return 1 if the datagram was successfully set up, or 0 if there was an error
-	static int socketStartUDP(uint8_t s, uint8_t* addr, uint16_t port);
+	// return true if the datagram was successfully set up, or false if there was an error
+	static bool socketStartUDP(uint8_t s, uint8_t* addr, uint16_t port);
 	// copy up to len bytes of data from buf into a UDP datagram to be
 	// sent later by sendUDP.  Allows datagrams to be built up from a series of bufferData calls.
 	// return Number of bytes successfully buffered
 	static uint16_t socketBufferData(uint8_t s, uint16_t offset, const uint8_t* buf, uint16_t len);
 	// Send a UDP datagram built up from a sequence of startUDP followed by one or more
 	// calls to bufferData.
-	// return 1 if the datagram was successfully sent, or 0 if there was an error
-	static int socketSendUDP(uint8_t s);
+	// return true if the datagram was successfully sent, or false if there was an error
+	static bool socketSendUDP(uint8_t s);
 	// Initialize the "random" source port number
 	static void socketPortRand(uint16_t n);
 };
@@ -144,6 +210,7 @@ public:
 	virtual IPAddress remoteIP() { return _remoteIP; };
 	// Return the port of the host who sent the current incoming packet
 	virtual uint16_t remotePort() { return _remotePort; };
+	virtual uint16_t localPort() { return _port; }
 };
 
 
@@ -151,12 +218,13 @@ public:
 
 class EthernetClient : public Client {
 public:
-	EthernetClient() : sockindex(MAX_SOCK_NUM) { };
-	EthernetClient(uint8_t s) : sockindex(s) { };
+	EthernetClient() : sockindex(MAX_SOCK_NUM), _timeout(1000) { }
+	EthernetClient(uint8_t s) : sockindex(s), _timeout(1000) { }
 
 	uint8_t status();
 	virtual int connect(IPAddress ip, uint16_t port);
 	virtual int connect(const char *host, uint16_t port);
+	virtual int availableForWrite(void);
 	virtual size_t write(uint8_t);
 	virtual size_t write(const uint8_t *buf, size_t size);
 	virtual int available();
@@ -170,15 +238,20 @@ public:
 	virtual bool operator==(const bool value) { return bool() == value; }
 	virtual bool operator!=(const bool value) { return bool() != value; }
 	virtual bool operator==(const EthernetClient&);
-	virtual bool operator!=(const EthernetClient& rhs) { return !this->operator==(rhs); };
+	virtual bool operator!=(const EthernetClient& rhs) { return !this->operator==(rhs); }
 	uint8_t getSocketNumber() const { return sockindex; }
+	virtual uint16_t localPort();
+	virtual IPAddress remoteIP();
+	virtual uint16_t remotePort();
+	virtual void setConnectionTimeout(uint16_t timeout) { _timeout = timeout; }
 
 	friend class EthernetServer;
 
 	using Print::write;
 
 private:
-	uint8_t sockindex;
+	uint8_t sockindex; // MAX_SOCK_NUM means client not in use
+	uint16_t _timeout;
 };
 
 
@@ -188,9 +261,11 @@ private:
 public:
 	EthernetServer(uint16_t port) : _port(port) { }
 	EthernetClient available();
+	EthernetClient accept();
 	virtual void begin();
 	virtual size_t write(uint8_t);
 	virtual size_t write(const uint8_t *buf, size_t size);
+	virtual operator bool();
 	using Print::write;
 	//void statusreport();
 
@@ -246,8 +321,8 @@ public:
 	int beginWithDHCP(uint8_t *, unsigned long timeout = 60000, unsigned long responseTimeout = 4000);
 	int checkLease();
 
-	static void DhcpClass::setHostName(char * newHostName);
-	static char * DhcpClass::getHostName();
+	static void setHostName(const char * newHostName);
+	static char * getHostName();
 
 };
 

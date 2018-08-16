@@ -20,6 +20,7 @@
 // Enter a MAC address for your controller below.
 // Newer Ethernet shields have a MAC address printed on a sticker on the shield
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+
 // if you don't want to use DNS (and reduce your sketch size)
 // use the numeric IP instead of the name for the server:
 //IPAddress server(74,125,232,128);  // numeric IP for Google (no DNS)
@@ -34,18 +35,19 @@ IPAddress myDns(192, 168, 0, 1);
 // that you want to connect to (port 80 is default for HTTP):
 EthernetClient client;
 
+// Variables to measure the speed
 unsigned long beginMicros, endMicros;
-unsigned long byteCount=0;
+unsigned long byteCount = 0;
+bool printWebData = true;  // set to false for better speed measurement
 
 void setup() {
-  // uncomment one of these if not using pin 10 for CS
+  // You can use Ethernet.init(pin) to configure the CS pin
+  //Ethernet.init(10);  // Most Arduino shields
+  //Ethernet.init(5);   // MKR ETH shield
   //Ethernet.init(0);   // Teensy 2.0
   //Ethernet.init(20);  // Teensy++ 2.0
   //Ethernet.init(15);  // ESP8266 with Adafruit Featherwing Ethernet
-  //Ethernet.init(32);  // ESP32 with Adafruit Featherwing Ethernet
-  //Ethernet.init(PB4); // STM32 with Adafruit Featherwing Ethernet
-  //Ethernet.init(11);  // Adafruit nRF52 with Featherwing Ethernet
-  //Ethernet.init(10);  // Most Arduino shields use pin 10
+  //Ethernet.init(33);  // ESP32 with Adafruit Featherwing Ethernet
 
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
@@ -57,7 +59,16 @@ void setup() {
   Serial.println("Initialize Ethernet with DHCP:");
   if (Ethernet.begin(mac) == 0) {
     Serial.println("Failed to configure Ethernet using DHCP");
-    // no point in carrying on, so do nothing forevermore:
+    // Check for Ethernet hardware present
+    if (Ethernet.hardwareStatus() == EthernetNoHardware) {
+      Serial.println("Ethernet shield was not found.  Sorry, can't run without hardware. :(");
+      while (true) {
+        delay(1); // do nothing, no point running without Ethernet hardware
+      }
+    }
+    if (Ethernet.linkStatus() == LinkOFF) {
+      Serial.println("Ethernet cable is not connected.");
+    }
     // try to congifure using IP address instead of DHCP:
     Ethernet.begin(mac, ip, myDns);
   } else {
@@ -72,7 +83,8 @@ void setup() {
 
   // if you get a connection, report back via serial:
   if (client.connect(server, 80)) {
-    Serial.println("connected");
+    Serial.print("connected to ");
+    Serial.println(client.remoteIP());
     // Make a HTTP request:
     client.println("GET /search?q=arduino HTTP/1.1");
     client.println("Host: www.google.com");
@@ -93,7 +105,9 @@ void loop() {
     byte buffer[80];
     if (len > 80) len = 80;
     client.read(buffer, len);
-    Serial.write(buffer, len); // show in the serial monitor (slows some boards)
+    if (printWebData) {
+      Serial.write(buffer, len); // show in the serial monitor (slows some boards)
+    }
     byteCount = byteCount + len;
   }
 
@@ -115,7 +129,9 @@ void loop() {
     Serial.println();
 
     // do nothing forevermore:
-    while (true);
+    while (true) {
+      delay(1);
+    }
   }
 }
 

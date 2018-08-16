@@ -44,14 +44,13 @@ unsigned long lastConnectionTime = 0;           // last time you connected to th
 const unsigned long postingInterval = 10*1000;  // delay between updates, in milliseconds
 
 void setup() {
-  // uncomment one of these if not using pin 10 for CS
+  // You can use Ethernet.init(pin) to configure the CS pin
+  //Ethernet.init(10);  // Most Arduino shields
+  //Ethernet.init(5);   // MKR ETH shield
   //Ethernet.init(0);   // Teensy 2.0
   //Ethernet.init(20);  // Teensy++ 2.0
   //Ethernet.init(15);  // ESP8266 with Adafruit Featherwing Ethernet
-  //Ethernet.init(32);  // ESP32 with Adafruit Featherwing Ethernet
-  //Ethernet.init(PB4); // STM32 with Adafruit Featherwing Ethernet
-  //Ethernet.init(11);  // Adafruit nRF52 with Featherwing Ethernet
-  //Ethernet.init(10);  // Most Arduino shields use pin 10
+  //Ethernet.init(33);  // ESP32 with Adafruit Featherwing Ethernet
 
   // start serial port:
   Serial.begin(9600);
@@ -63,7 +62,16 @@ void setup() {
   Serial.println("Initialize Ethernet with DHCP:");
   if (Ethernet.begin(mac) == 0) {
     Serial.println("Failed to configure Ethernet using DHCP");
-    // no point in carrying on, so do nothing forevermore:
+    // Check for Ethernet hardware present
+    if (Ethernet.hardwareStatus() == EthernetNoHardware) {
+      Serial.println("Ethernet shield was not found.  Sorry, can't run without hardware. :(");
+      while (true) {
+        delay(1); // do nothing, no point running without Ethernet hardware
+      }
+    }
+    if (Ethernet.linkStatus() == LinkOFF) {
+      Serial.println("Ethernet cable is not connected.");
+    }
     // try to congifure using IP address instead of DHCP:
     Ethernet.begin(mac, ip, myDns);
     Serial.print("My IP address: ");

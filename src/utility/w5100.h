@@ -1,4 +1,5 @@
 /*
+ * Copyright 2018 Paul Stoffregen
  * Copyright (c) 2010 by Cristian Maglie <c.maglie@bug.st>
  *
  * This file is free software; you can redistribute it and/or modify
@@ -6,6 +7,9 @@
  * or the GNU Lesser General Public License version 2.1, both as
  * published by the Free Software Foundation.
  */
+
+// w5100.h contains private W5x00 hardware "driver" level definitions
+// which are not meant to be exposed to other libraries or Arduino users
 
 #ifndef	W5100_H_INCLUDED
 #define	W5100_H_INCLUDED
@@ -17,17 +21,40 @@
 #define SPI_ETHERNET_SETTINGS SPISettings(14000000, MSBFIRST, SPI_MODE0)
 
 // Safe for W5200 and W5500, but too fast for W5100
-// uncomment this if you know you'll never need W5100 support
+// Uncomment this if you know you'll never need W5100 support.
+//  Higher SPI clock only results in faster transfer to hosts on a LAN
+//  or with very low packet latency.  With ordinary internet latency,
+//  the TCP window size & packet loss determine your overall speed.
 //#define SPI_ETHERNET_SETTINGS SPISettings(30000000, MSBFIRST, SPI_MODE0)
 
-#define MAX_SOCK_NUM 4
+
+// Require Ethernet.h, because we need MAX_SOCK_NUM
+#ifndef ethernet_h_
+#error "Ethernet.h must be included before w5100.h"
+#endif
+
+
+// Arduino 101's SPI can not run faster than 8 MHz.
+#if defined(ARDUINO_ARCH_ARC32)
+#undef SPI_ETHERNET_SETTINGS
+#define SPI_ETHERNET_SETTINGS SPISettings(8000000, MSBFIRST, SPI_MODE0)
+#endif
+
+// Arduino Zero can't use W5100-based shields faster than 8 MHz
+// https://github.com/arduino-libraries/Ethernet/issues/37#issuecomment-408036848
+// W5500 does seem to work at 12 MHz.  Delete this if only using W5500
+#if defined(__SAMD21G18A__)
+#undef SPI_ETHERNET_SETTINGS
+#define SPI_ETHERNET_SETTINGS SPISettings(8000000, MSBFIRST, SPI_MODE0)
+#endif
+
 
 typedef uint8_t SOCKET;
 
 class SnMR {
 public:
   static const uint8_t CLOSE  = 0x00;
-  static const uint8_t TCP    = 0x01;
+  static const uint8_t TCP    = 0x21;
   static const uint8_t UDP    = 0x02;
   static const uint8_t IPRAW  = 0x03;
   static const uint8_t MACRAW = 0x04;
@@ -88,6 +115,12 @@ public:
   static const uint8_t IDP  = 22;
   static const uint8_t ND   = 77;
   static const uint8_t RAW  = 255;
+};
+
+enum W5100Linkstatus {
+  UNKNOWN,
+  LINK_ON,
+  LINK_OFF
 };
 
 class W5100Class {
@@ -154,6 +187,7 @@ public:
   static uint16_t read##name(uint8_t *_buff) {    \
     return read(address, _buff, size);            \
   }
+  static W5100Linkstatus getLinkStatus();
 
 public:
   __GP_REGISTER8 (MR,     0x0000);    // Mode
@@ -174,6 +208,9 @@ public:
   __GP_REGISTER16(UPORT,  0x002E);    // Unreachable Port address in UDP mode (W5100 only)
   __GP_REGISTER8 (VERSIONR_W5200,0x001F);   // Chip Version Register (W5200 only)
   __GP_REGISTER8 (VERSIONR_W5500,0x0039);   // Chip Version Register (W5500 only)
+  __GP_REGISTER8 (PSTATUS_W5200,     0x0035);    // PHY Status
+  __GP_REGISTER8 (PHYCFGR_W5500,     0x002E);    // PHY Configuration register, default: 10111xxx
+
 
 #undef __GP_REGISTER8
 #undef __GP_REGISTER16
@@ -182,21 +219,27 @@ public:
   // W5100 Socket registers
   // ----------------------
 private:
+  static uint16_t CH_BASE(void) {
+    //if (chip == 55) return 0x1000;
+    //if (chip == 52) return 0x4000;
+    //return 0x0400;
+    return CH_BASE_MSB << 8;
+  }
+  static uint8_t CH_BASE_MSB; // 1 redundant byte, saves ~80 bytes code on AVR
+  static const uint16_t CH_SIZE = 0x0100;
+
   static inline uint8_t readSn(SOCKET s, uint16_t addr) {
-    return read(CH_BASE + s * CH_SIZE + addr);
+    return read(CH_BASE() + s * CH_SIZE + addr);
   }
   static inline uint8_t writeSn(SOCKET s, uint16_t addr, uint8_t data) {
-    return write(CH_BASE + s * CH_SIZE + addr, data);
+    return write(CH_BASE() + s * CH_SIZE + addr, data);
   }
   static inline uint16_t readSn(SOCKET s, uint16_t addr, uint8_t *buf, uint16_t len) {
-    return read(CH_BASE + s * CH_SIZE + addr, buf, len);
+    return read(CH_BASE() + s * CH_SIZE + addr, buf, len);
   }
   static inline uint16_t writeSn(SOCKET s, uint16_t addr, uint8_t *buf, uint16_t len) {
-    return write(CH_BASE + s * CH_SIZE + addr, buf, len);
+    return write(CH_BASE() + s * CH_SIZE + addr, buf, len);
   }
-
-  static uint16_t CH_BASE;
-  static const uint16_t CH_SIZE = 0x0100;
 
 #define __SOCKET_REGISTER8(name, address)                    \
   static inline void write##name(SOCKET _s, uint8_t _data) { \
@@ -261,13 +304,29 @@ private:
   static uint8_t isW5500(void);
 
 public:
-  static const int SOCKETS = 4;
-  static uint16_t SMASK;
+  static uint8_t getChip(void) { return chip; }
+#ifdef ETHERNET_LARGE_BUFFERS
   static uint16_t SSIZE;
-//private:
-  //receive and transmit have same buffer sizes
-  static uint16_t SBASE[SOCKETS]; // Tx buffer base address
-  static uint16_t RBASE[SOCKETS]; // Rx buffer base address
+  static uint16_t SMASK;
+#else
+  static const uint16_t SSIZE = 2048;
+  static const uint16_t SMASK = 0x07FF;
+#endif
+  static uint16_t SBASE(uint8_t socknum) {
+    if (chip == 51) {
+      return socknum * SSIZE + 0x4000;
+    } else {
+      return socknum * SSIZE + 0x8000;
+    }
+  }
+  static uint16_t RBASE(uint8_t socknum) {
+    if (chip == 51) {
+      return socknum * SSIZE + 0x6000;
+    } else {
+      return socknum * SSIZE + 0xC000;
+    }
+  }
+
   static bool hasOffsetAddressMapping(void) {
     if (chip == 55) return true;
     return false;

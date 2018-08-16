@@ -26,18 +26,16 @@ byte mac[] = {
 };
 
 void setup() {
-  // uncomment one of these if not using pin 10 for CS
+  // You can use Ethernet.init(pin) to configure the CS pin
+  //Ethernet.init(10);  // Most Arduino shields
+  //Ethernet.init(5);   // MKR ETH shield
   //Ethernet.init(0);   // Teensy 2.0
   //Ethernet.init(20);  // Teensy++ 2.0
   //Ethernet.init(15);  // ESP8266 with Adafruit Featherwing Ethernet
-  //Ethernet.init(32);  // ESP32 with Adafruit Featherwing Ethernet
-  //Ethernet.init(PB4); // STM32 with Adafruit Featherwing Ethernet
-  //Ethernet.init(11);  // Adafruit nRF52 with Featherwing Ethernet
-  //Ethernet.init(10);  // Most Arduino shields use pin 10
+  //Ethernet.init(33);  // ESP32 with Adafruit Featherwing Ethernet
 
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
-  // this check is only needed on the Leonardo:
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
   }
@@ -46,12 +44,19 @@ void setup() {
   Serial.println("Initialize Ethernet with DHCP:");
   if (Ethernet.begin(mac) == 0) {
     Serial.println("Failed to configure Ethernet using DHCP");
+    if (Ethernet.hardwareStatus() == EthernetNoHardware) {
+      Serial.println("Ethernet shield was not found.  Sorry, can't run without hardware. :(");
+    } else if (Ethernet.linkStatus() == LinkOFF) {
+      Serial.println("Ethernet cable is not connected.");
+    }
     // no point in carrying on, so do nothing forevermore:
-    for (;;)
-      ;
+    while (true) {
+      delay(1);
+    }
   }
   // print your local IP address:
-  printIPAddress();
+  Serial.print("My IP address: ");
+  Serial.println(Ethernet.localIP());
 }
 
 void loop() {
@@ -65,7 +70,8 @@ void loop() {
       //renewed success
       Serial.println("Renewed success");
       //print your local IP address:
-      printIPAddress();
+      Serial.print("My IP address: ");
+      Serial.println(Ethernet.localIP());
       break;
 
     case 3:
@@ -77,7 +83,8 @@ void loop() {
       //rebind success
       Serial.println("Rebind success");
       //print your local IP address:
-      printIPAddress();
+      Serial.print("My IP address: ");
+      Serial.println(Ethernet.localIP());
       break;
 
     default:
@@ -86,7 +93,3 @@ void loop() {
   }
 }
 
-void printIPAddress() {
-  Serial.print("My IP address: ");
-  Serial.println(Ethernet.localIP());
-}
