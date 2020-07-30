@@ -1,3 +1,39 @@
+# Teensy-Only Wiznet Ethernet Library
+
+This copy of Ethernet for Wiznet chips is intended only for Teensy boards.
+For using with any non-Teensy board, please use Arduino's Ethernet:
+
+https://github.com/arduino-libraries/Ethernet
+
+Or use the copy of Ethernet from your board's vendor, if they publish a
+modified copy of Ethernet specifically for their boards.
+
+### A bit of history
+
+Back in 2018, I worked on unifying support for all 3 Wiznet chips
+(available at that time) with many performance improvements I had
+developed for Teensy's copy of Ethernet.  I tested on many
+boards and it was released as Arduino Ethernet version 2.0.0.
+
+https://www.pjrc.com/arduino-ethernet-library-2-0-0/
+
+For a brief time, I was officially the maintainer for Arduino's
+Ethernet library.  However, months later Arduino changed their
+repository access requirements, which I could not meet.  I also
+became very busy with developing Teensy 4.0, leaving little time
+for testing Ethernet on other hardware.
+
+In 2020, we released Teensy 4.1 with native ethernet, which offers
+vastly better performance than using a Wiznet chip.  I do not
+anticipate spending much development time on Wiznet support in the
+foreseeable future.  If you use Ethernet with Teensy, please consider
+Teensy 4.1 for future projects.  The performance is so much better.
+
+If you use a non-Teensy board, this is not the Ethernet library for you.
+Please do not report issue or ask for technical support for non-Teensy
+boards on this Teensy-specific repository.
+
+
 # Improved Performance Ethernet Library
 
 Wiznet chips W5100, W5200 and W5500 are automatically detected.
