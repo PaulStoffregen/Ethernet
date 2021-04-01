@@ -373,6 +373,7 @@ private:
 	}
 	inline static void resetSS() {
 		*(ss_pin_reg+33) = ss_pin_mask;
+		if (chip == 51) delayNanoseconds(10);
 	}
 #elif defined(__MKL26Z64__)
 	static volatile uint8_t *ss_pin_reg;
