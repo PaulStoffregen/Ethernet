@@ -1,5 +1,6 @@
 {
   "name": "Ethernet",
+  "version": "2.0.0",
   "keywords": "http, web, server, ethernet",
   "description": "Ethernet Library for Teensy",
   "repository":
@@ -8,5 +9,6 @@
     "url": "https://github.com/PaulStoffregen/Ethernet.git"
   },
   "frameworks": "arduino",
-  "platforms": "teensy"
+  "platforms": "teensy",
+  "headers": "Ethernet.h"
 }
