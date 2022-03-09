@@ -126,7 +126,7 @@ enum W5100Linkstatus {
 class W5100Class {
 
 public:
-  static uint8_t init(void);
+  static uint8_t init();
 
   inline void setGatewayIp(const uint8_t * addr) { writeGAR(addr); }
   inline void getGatewayIp(uint8_t * addr) { readGAR(addr); }
@@ -298,6 +298,7 @@ public:
 private:
   static uint8_t chip;
   static uint8_t ss_pin;
+  static SPIClass *_pspi;
   static uint8_t softReset(void);
   static uint8_t isW5100(void);
   static uint8_t isW5200(void);
@@ -332,6 +333,7 @@ public:
     return false;
   }
   static void setSS(uint8_t pin) { ss_pin = pin; }
+  static void setSPI(SPIClass *pspi) {_pspi = pspi; }
 
 private:
 #if defined(__AVR__)
