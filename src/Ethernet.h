@@ -20,6 +20,7 @@
 
 #ifndef ethernet_h_
 #define ethernet_h_
+#include <SPI.h>
 
 // All symbols exposed to Arduino sketches are contained in this header file
 //
@@ -75,6 +76,7 @@ class EthernetClass {
 private:
 	static IPAddress _dnsServerAddress;
 	static DhcpClass* _dhcp;
+	static SPIClass *_pspi;
 public:
 	// Initialise the Ethernet shield to use the provided MAC address and
 	// gain the rest of the configuration through DHCP.
@@ -89,13 +91,15 @@ public:
 	static void begin(uint8_t *mac, IPAddress ip, IPAddress dns);
 	static void begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress gateway);
 	static void begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress gateway, IPAddress subnet);
-	static void init(uint8_t sspin = 10);
+	static void init(uint8_t sspin = 10, SPIClass &spi=SPI);
 
 	static void MACAddress(uint8_t *mac_address);
 	static IPAddress localIP();
 	static IPAddress subnetMask();
 	static IPAddress gatewayIP();
 	static IPAddress dnsServerIP() { return _dnsServerAddress; }
+
+	static inline SPIClass *spi()  {return _pspi; }
 
 	void setMACAddress(const uint8_t *mac_address);
 	void setLocalIP(const IPAddress local_ip);
