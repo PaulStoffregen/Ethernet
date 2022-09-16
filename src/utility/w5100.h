@@ -471,7 +471,7 @@ extern W5100Class W5100;
 #ifndef UTIL_H
 #define UTIL_H
 
-#define htons(x) ( (((x)<<8)&0xFF00) | (((x)>>8)&0xFF) )
+#define htons(x) ( (((x)&0xFF)<<8) | (((x)>>8)&0xFF) )
 #define ntohs(x) htons(x)
 
 #define htonl(x) ( ((x)<<24 & 0xFF000000UL) | \
