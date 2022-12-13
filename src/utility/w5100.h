@@ -33,6 +33,9 @@
 #error "Ethernet.h must be included before w5100.h"
 #endif
 
+#if defined(__AVR_AT90CAN32__) || defined(__AVR_AT90CAN64__) || defined(__AVR_AT90CAN128__)
+#undef LISTEN
+#endif
 
 // Arduino 101's SPI can not run faster than 8 MHz.
 #if defined(ARDUINO_ARCH_ARC32)
