@@ -141,7 +141,7 @@ void getData() {
   //Read the pressure data lower 16 bits:
   unsigned int pressureDataLow = readRegister(0x20, 2);
   //combine the two parts into one 19-bit number:
-  pressure = ((pressureDataHigh << 16) | pressureDataLow) / 4;
+  pressure = (((long) pressureDataHigh << 16) | pressureDataLow) / 4;
 
   Serial.print("Temperature: ");
   Serial.print(temperature);
