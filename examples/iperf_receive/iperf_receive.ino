@@ -6,6 +6,9 @@
    to transmit test data.  Speed will be shown on your PC and in serial
    monitor.
 
+   By default, SPI 14 MHz is used for compatibility with Wiznet W5100.  Edit
+   {libraries}/Ethernet/src/utility/w5100.h for faster with W5500 and W5200.
+
    This example is in the public domain
 */
 
@@ -38,10 +41,14 @@ void loop() {
     Serial.println(client.remoteIP());
     int sum = 0;
     elapsedMillis msec = 0;
-    while (client.connected()) {
+    while (1) {
       int avail = client.available();
       if (avail < 0) break;
-      if (avail == 0) continue;
+      if (avail == 0) {
+        if (client.connected()) continue;
+        Serial.println("host disconnected");
+        break;
+      }
       if (avail > (int)sizeof(rxbuf)) avail = sizeof(rxbuf);
       int num = client.read(rxbuf, avail);
       if (num > 0) {
@@ -55,7 +62,6 @@ void loop() {
         }
       }
     }
-    Serial.println("host disconnected");
     client.stop();
     Serial.println();
   }
@@ -77,5 +83,4 @@ static void getMACAddress(uint8_t* const mac) {
   memcpy(mac, dummymac, 6);
 #endif
 }
-
 
