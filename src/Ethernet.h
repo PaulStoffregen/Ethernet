@@ -48,11 +48,15 @@
 // does not always seem to work in practice (maybe Wiznet bugs?)
 //#define ETHERNET_LARGE_BUFFERS
 
+// This is used to check from outside, if there is a function 
+// to set the hostname in the library. Inside the library it is not used.
+#define SET_HOSTNAME_AVAILABLE
 
 #include <Arduino.h>
 #include "Client.h"
 #include "Server.h"
 #include "Udp.h"
+#include "Dhcp.h"
 
 enum EthernetLinkStatus {
 	Unknown,
@@ -112,6 +116,10 @@ public:
 	friend class EthernetClient;
 	friend class EthernetServer;
 	friend class EthernetUDP;
+
+	static void setHostName(const char * newHostName);
+	static char * getHostName();
+
 private:
 	// Opens a socket(TCP or UDP or IP_RAW mode)
 	static uint8_t socketBegin(uint8_t protocol, uint16_t port);
@@ -301,6 +309,8 @@ private:
 	uint8_t _dhcp_state;
 	EthernetUDP _dhcpUdpSocket;
 
+	static char _hostName[HOST_NAME_LENGTH];
+
 	int request_DHCP_lease();
 	void reset_DHCP_lease();
 	void presend_DHCP();
@@ -317,9 +327,11 @@ public:
 
 	int beginWithDHCP(uint8_t *, unsigned long timeout = 60000, unsigned long responseTimeout = 4000);
 	int checkLease();
+
+	static void setHostName(const char * newHostName);
+	static char * getHostName();
+
 };
-
-
 
 
 

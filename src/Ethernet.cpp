@@ -187,6 +187,16 @@ IPAddress EthernetClass::gatewayIP()
 	return ret;
 }
 
+void EthernetClass::setHostName(const char * newHostName) 
+{
+	_dhcp->setHostName(newHostName);
+}
+
+char * EthernetClass::getHostName() 
+{
+	return _dhcp->getHostName();
+}
+
 void EthernetClass::setMACAddress(const uint8_t *mac_address)
 {
 	EthernetClass::spi()->beginTransaction(SPI_ETHERNET_SETTINGS);
@@ -232,6 +242,7 @@ void EthernetClass::setRetransmissionCount(uint8_t num)
 	W5100.setRetransmissionCount(num);
 	EthernetClass::spi()->endTransaction();
 }
+
 
 
 
