@@ -83,9 +83,22 @@ size_t EthernetClient::write(uint8_t b)
 size_t EthernetClient::write(const uint8_t *buf, size_t size)
 {
 	if (sockindex >= MAX_SOCK_NUM) return 0;
-	if (Ethernet.socketSend(sockindex, buf, size)) return size;
-	setWriteError();
-	return 0;
+
+	// keep sending frames until all of the data is sent over the wire
+	size_t numBytesWritten = 0;
+	while (size != 0) {
+		uint16_t numBytesSent = Ethernet.socketSend(sockindex, buf, size);
+		if (numBytesSent == 0) {
+			setWriteError();
+			break;
+		}
+		// prepare for the next frame
+		size -= numBytesSent;
+		buf += numBytesSent;
+		numBytesWritten += numBytesSent;
+	}
+	
+	return numBytesWritten;
 }
 
 int EthernetClient::available()
